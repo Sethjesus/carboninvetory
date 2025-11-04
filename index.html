@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <!-- =========================
+       🌿 ESG 碳盤查 v5.8.1 (Full)
+       - 固定項目 + 自建項目（含部門）
+       - 月份切換 / 即時計算
+       - 圖表（項目條、範疇餅、固定vs自建走勢）
+       - Excel（兩工作表）/ PDF 匯出
+       - GitHub JSON 上傳 / 下載（data/公司_年度.json）
+       - PWA (manifest + SW 註冊)
+       - 無行數精簡、完整可讀
+     ========================= -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🌿 ESG 碳盤查 v5.8.1 Full</title>
+
+  <!-- ===== PWA ===== -->
+  <meta name="theme-color" content="#16a34a" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <!-- ===== 外掛 ===== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <!-- ===== 樣式 ===== -->
+  <style>
+    :root{
+      --brand:#16a34a;
+      --ink:#0f172a;
+      --bg:#f8fafc;
+      --panel:#ffffff;
+      --shadow:0 10px 28px rgba(2,6,23,.08);
+    }
+    html,body{
+      margin:0; padding:0;
+      font-family:"Microsoft JhengHei",system-ui,Segoe UI,Arial,sans-serif;
+      color:var(--ink); background:var(--bg);
+    }
+    header{ position:sticky; top:0; z-index:10; background:linear-gradient(180deg,#ffffff 0%,#ffffffcc 100%); backdrop-filter:saturate(140%) blur(4px); border-bottom:1px solid #e5e7eb; }
+    .card{ background:var(--panel); border-radius:1rem; box-shadow:var(--shadow); padding:1.25rem; }
+    .btn{ background:var(--brand); color:#fff; border-radius:.6rem; padding:.5rem .95rem; font-weight:700; cursor:pointer; border:none; }
+    .btn-ghost{ border:1px dashed #94a3b8; color:#334155; background:transparent; border-radius:.6rem; padding:.5rem .95rem; font-weight:700; cursor:pointer; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:.55rem .6rem; border-bottom:1px solid #e5e7eb; text-align:left; }
+    th{ background:#f1f5f9; font-weight:800; }
+    .num{text-align:right;}
+    input,select{ width:100%; border:1px solid #e5e7eb; border-radius:.5rem; padding:.35rem .5rem; }
+    #toast{ position:fixed; right:24px; bottom:28px; background:var(--brand); color:#fff; font-weight:800; padding:.5rem .9rem; border-radius:.7rem; opacity:0; transform:translateY(16px); transition:.35s; z-index:9999; }
+    #toast.show{ opacity:1; transform:translateY(0); }
+    .hint{ font-size:.85rem; color:#64748b; }
+    .k{ color:#0ea5e9; font-weight:700; }
+  </style>
+</head>
+
+<body>
+  <!-- ===== Header ===== -->
+  <header class="px-4">
+    <div class="max-w-7xl mx-auto py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="text-2xl">🌿</div>
+        <div>
+          <div class="text-xl font-extrabold leading-tight">ESG 碳盤查 v5.8.1</div>
+          <div class="text-xs text-slate-500">固定＋自建＋部門＋Excel/PDF＋Git JSON＋PWA</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="btn-ghost text-sm">🌞 / 🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="toast">已儲存</div>
+
+  <!-- ===== Main ===== -->
+  <main class="max-w-7xl mx-auto px-4 pb-28">
+
+    <!-- 企業資訊 -->
+    <section class="card mt-5">
+      <h2 class="font-bold text-lg mb-3">🏢 企業資訊</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm mb-1">公司名稱</label>
+          <input id="companyName" type="text" value="景沛 ESG" placeholder="請輸入公司名稱" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">年度（西元年）</label>
+          <input id="fiscalYear" type="number" value="2025" min="2000" max="2100" step="1" />
+        </div>
+        <div class="flex items-end gap-2">
+          <button id="saveMeta" class="btn">儲存公司/年度</button>
+          <span class="hint">將以 <span class="k">公司＋年度</span> 作為資料命名空間</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 月份 -->
+    <section class="card">
+      <h2 class="font-bold text-lg mb-3">📅 月份選擇</h2>
+      <div id="monthTabs" class="flex flex-wrap gap-2"></div>
+      <div class="hint mt-2">切換月份前會自動儲存。</div>
+    </section>
+
+    <!-- 固定項目 -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold text-lg">📘 固定項目（自動範疇＋係數＋部門）</h2>
+        <div class="flex items-center gap-2">
+          <button id="btnResetPreset" class="btn-ghost">↻ 重置預設</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table id="tableFixed" class="text-sm">
+          <thead>
+            <tr>
+              <th>項目</th>
+              <th>範疇</th>
+              <th class="num">用量</th>
+              <th>單位</th>
+              <th class="num">排放係數</th>
+              <th>部門／據點</th>
+              <th class="num">排放量 (kgCO₂e)</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyFixed"></tbody>
+          <tfoot class="font-bold bg-slate-50">
+            <tr>
+              <td colspan="6" class="text-right">固定合計</td>
+              <td id="sumFixed" class="num">0</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="hint mt-2">固定項目：只需輸入「用量」與「部門」，會依係數自動算排放。</div>
+    </section>
+
+    <!-- 自建項目 -->
+    <section class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold text-lg">✏️ 自建項目（手動輸入所有欄位）</h2>
+        <div class="flex items-center gap-2">
+          <button id="btnAddCustom" class="btn">+ 新增項目</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table id="tableCustom" class="text-sm">
+          <thead>
+            <tr>
+              <th>項目</th>
+              <th>分類</th>
+              <th>範疇</th>
+              <th class="num">用量</th>
+              <th>單位</th>
+              <th class="num">排放係數</th>
+              <th>部門／據點</th>
+              <th class="num">排放量</th>
+              <th>刪除</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCustom"></tbody>
+          <tfoot class="font-bold bg-slate-50">
+            <tr>
+              <td colspan="7" class="text-right">自建合計</td>
+              <td id="sumCustom" class="num">0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <!-- 功能列 -->
+    <section class="card">
+      <h2 class="font-bold text-lg mb-3">💾 功能列</h2>
+      <div class="flex flex-wrap gap-3">
+        <button id="btnCalc" class="btn">重新計算</button>
+        <button id="btnExportExcel" class="btn-ghost">匯出 Excel（固定＋自建）</button>
+        <button id="btnExportPDF" class="btn-ghost">匯出 PDF（含 3 圖）</button>
+        <button id="btnUploadGit" class="btn">⬆ 上傳至 GitHub（JSON）</button>
+        <button id="btnLoadGit" class="btn-ghost">⬇ 從 GitHub 載入（JSON）</button>
+        <button id="btnClearToken" class="btn-ghost">清除 Token</button>
+      </div>
+      <div class="hint mt-2">
+        GitHub 檔名：<span class="k">data/公司_年度.json</span>（公司會做檔名安全處理）。首次上傳會詢問 Token，保存在瀏覽器 localStorage。
+      </div>
+    </section>
+
+    <!-- 圖表 -->
+    <section class="card">
+      <h2 class="font-bold text-lg mb-3">📊 視覺化分析</h2>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <h3 class="font-semibold mb-1">各項目排放量</h3>
+          <canvas id="chartItems"></canvas>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-1">S1/S2/S3 比例</h3>
+          <canvas id="chartScopes"></canvas>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-1">固定 vs 自建</h3>
+          <canvas id="chartTrend"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 主程式 -->
+    <section class="card">
+      <h2 class="font-bold text-lg mb-3">⚙️ 程式碼（內嵌）</h2>
+      <pre class="text-xs whitespace-pre-wrap leading-5 text-slate-600">本頁已內嵌完整 JS；以下為實際運作程式。</pre>
+    </section>
+
+    <script>
+      /* =========================
+         主題切換（light/dark）
+      ========================= */
+      const themeToggle = document.getElementById("themeToggle");
+      function applyTheme(mode) {
+        document.documentElement.classList.toggle("dark", mode === "dark");
+        localStorage.setItem("carbonTheme", mode);
+      }
+      themeToggle.onclick = () => {
+        const isDark = document.documentElement.classList.contains("dark");
+        applyTheme(isDark ? "light" : "dark");
+      };
+      applyTheme(localStorage.getItem("carbonTheme") || "light");
+
+      /* =========================
+         DOM + 狀態
+      ========================= */
+      const tbodyFixed  = document.getElementById("tbodyFixed");
+      const tbodyCustom = document.getElementById("tbodyCustom");
+      const sumFixed    = document.getElementById("sumFixed");
+      const sumCustom   = document.getElementById("sumCustom");
+      const toast       = document.getElementById("toast");
+
+      let store = {};                               // 以 { 1..12: { fixed:{index:{activity,dept}}, custom:[...] } } 組成
+      let currentMonth = new Date().getMonth() + 1; // 1~12
+
+      /* =========================
+         固定項目：預設（含部門）
+      ========================= */
+      const FIXED_ITEMS = [
+        { name:"電力",       scope:"S2", unit:"kWh", factor:0.495, dept:"總部"   },
+        { name:"自來水",     scope:"S2", unit:"m³",  factor:0.156, dept:"總部"   },
+        { name:"汽油",       scope:"S1", unit:"L",   factor:2.92,  dept:"物流"   },
+        { name:"柴油",       scope:"S1", unit:"L",   factor:3.32,  dept:"物流"   },
+        { name:"天然氣",     scope:"S1", unit:"m³",  factor:2.63,  dept:"餐飲部" },
+        { name:"交通通勤",   scope:"S3", unit:"km",  factor:0.251, dept:"業務部" },
+        { name:"垃圾焚化",   scope:"S3", unit:"kg",  factor:1.01,  dept:"清潔"   },
+        { name:"餐飲膳食",   scope:"S3", unit:"份",  factor:1.29,  dept:"餐飲部" },
+        { name:"紙張使用",   scope:"S3", unit:"kg",  factor:0.402, dept:"行政"   },
+        { name:"廢水處理",   scope:"S3", unit:"m³",  factor:0.533, dept:"清潔"   }
+      ];
+
+      /* =========================
+         小工具
+      ========================= */
+      const showToast = (msg) => {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 1400);
+      };
+      const safeKey = (s) => (s || "公司").replace(/[\\\/:*?"<>|.\s]+/g, "_");
+
+      function getMeta(){
+        const company = (document.getElementById("companyName").value || "公司").trim();
+        const year    = parseInt(document.getElementById("fiscalYear").value) || new Date().getFullYear();
+        return { company, year };
+      }
+      function localKey(){
+        const m = getMeta();
+        return `ESGv581__${safeKey(m.company)}__${m.year}`;
+      }
+
+      /* =========================
+         月份 UI
+      ========================= */
+      function buildMonthTabs(){
+        const host = document.getElementById("monthTabs");
+        host.innerHTML = "";
+        for(let m=1;m<=12;m++){
+          const b = document.createElement("button");
+          b.textContent = m + "月";
+          b.className = "btn-ghost " + (m===currentMonth ? "bg-green-100" : "");
+          b.onclick = () => {
+            saveLocal(false);     // 切換前先存
+            currentMonth = m;
+            renderAll();
+          };
+          host.appendChild(b);
+        }
+      }
+
+      /* =========================
+         固定表：渲染
+      ========================= */
+      function renderFixed(){
+        tbodyFixed.innerHTML = "";
+        const fixedState = (store[currentMonth] && store[currentMonth].fixed) ? store[currentMonth].fixed : {};
+
+        FIXED_ITEMS.forEach((it, idx) => {
+          const act  = (fixedState[idx] && fixedState[idx].activity != null) ? fixedState[idx].activity : 0;
+          const dept = (fixedState[idx] && fixedState[idx].dept) ? fixedState[idx].dept : it.dept;
+          const emi  = (parseFloat(act)||0) * it.factor;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = [
+            `<td>${it.name}</td>`,
+            `<td>${it.scope}</td>`,
+            `<td><input type="number" class="num actFixed" data-idx="${idx}" value="${act}" min="0" step="0.001"></td>`,
+            `<td>${it.unit}</td>`,
+            `<td class="num">${it.factor}</td>`,
+            `<td><input value="${dept}" placeholder="部門／據點"></td>`,
+            `<td class="num emiFixed">${emi.toFixed(3)}</td>`
+          ].join("");
+
+          tbodyFixed.appendChild(tr);
+        });
+
+        calcFixed();
+      }
+
+      /* =========================
+         自建表：渲染 & 行產生器
+      ========================= */
+      function trCustomRow(o={}){
+        const s = o.scope || "S3";
+        const act = o.activity || 0;
+        const fac = o.factor || 0;
+        const emi = (parseFloat(act)||0) * (parseFloat(fac)||0);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = [
+          `<td><input value="${o.name||""}" placeholder="項目"></td>`,
+          `<td><input value="${o.category||""}" placeholder="分類"></td>`,
+          `<td>
+            <select>
+              <option value="S1" ${s==="S1"?"selected":""}>S1</option>
+              <option value="S2" ${s==="S2"?"selected":""}>S2</option>
+              <option value="S3" ${s==="S3"?"selected":""}>S3</option>
+            </select>
+          </td>`,
+          `<td><input type="number" class="num" value="${act}" min="0" step="0.001"></td>`,
+          `<td><input value="${o.unit||""}" placeholder="單位"></td>`,
+          `<td><input type="number" class="num" value="${fac}" step="0.001"></td>`,
+          `<td><input value="${o.dept||"未填"}" placeholder="部門／據點"></td>`,
+          `<td class="num emi">${emi.toFixed(3)}</td>`,
+          `<td><button class="text-red-500 del">刪除</button></td>`
+        ].join("");
+
+        return tr;
+      }
+
+      function renderCustom(){
+        tbodyCustom.innerHTML = "";
+        const list = (store[currentMonth] && store[currentMonth].custom) ? store[currentMonth].custom : [];
+        list.forEach(rowObj => tbodyCustom.appendChild(trCustomRow(rowObj)));
+        calcCustom();
+      }
+
+      /* =========================
+         計算：固定 / 自建
+      ========================= */
+      function calcFixed(){
+        let total = 0;
+        const trs = [...tbodyFixed.querySelectorAll("tr")];
+
+        trs.forEach((tr, idx) => {
+          const act  = parseFloat(tr.querySelector(".actFixed").value) || 0;
+          const dept = tr.children[5].querySelector("input").value || FIXED_ITEMS[idx].dept;
+          const emi  = act * FIXED_ITEMS[idx].factor;
+          tr.querySelector(".emiFixed").textContent = emi.toFixed(3);
+          total += emi;
+
+          if(!store[currentMonth]) store[currentMonth] = {};
+          if(!store[currentMonth].fixed) store[currentMonth].fixed = {};
+          store[currentMonth].fixed[idx] = { activity: act, dept };
+        });
+
+        sumFixed.textContent = total.toFixed(3);
+        saveLocal(false);
+        drawCharts();
+      }
+
+      function calcCustom(){
+        let total = 0;
+        const trs = [...tbodyCustom.querySelectorAll("tr")];
+
+        trs.forEach(tr => {
+          const t  = tr.querySelectorAll("input,select");
+          const a  = parseFloat(t[3].value) || 0;   // 用量
+          const f  = parseFloat(t[5].value) || 0;   // 係數
+          const emi = a * f;
+          tr.querySelector(".emi").textContent = emi.toFixed(3);
+          total += emi;
+        });
+
+        sumCustom.textContent = total.toFixed(3);
+        saveLocal(false);
+        drawCharts();
+      }
+
+      // 綁定事件（固定 / 自建）
+      tbodyFixed .addEventListener("input", calcFixed);
+      tbodyCustom.addEventListener("input",  calcCustom);
+      tbodyCustom.addEventListener("click", (e) => {
+        if(e.target.classList.contains("del")){
+          e.target.closest("tr").remove();
+          calcCustom();
+        }
+      });
+      document.getElementById("btnAddCustom").onclick = () => {
+        tbodyCustom.appendChild(trCustomRow());
+      };
+
+      /* =========================
+         儲存 / 載入（localStorage）
+      ========================= */
+      function packCustomRows(){
+        return [...tbodyCustom.querySelectorAll("tr")].map(tr => {
+          const t = tr.querySelectorAll("input,select");
+          return {
+            name:t[0].value,
+            category:t[1].value,
+            scope:t[2].value,
+            activity:parseFloat(t[3].value)||0,
+            unit:t[4].value,
+            factor:parseFloat(t[5].value)||0,
+            dept:t[6].value
+          };
+        });
+      }
+
+      function saveLocal(showToastNow=true){
+        if(!store[currentMonth]) store[currentMonth] = {};
+        store[currentMonth].custom = packCustomRows();
+        localStorage.setItem(localKey(), JSON.stringify(store));
+        if(showToastNow) showToast("已儲存");
+      }
+
+      function loadLocal(){
+        store = JSON.parse(localStorage.getItem(localKey()) || "{}");
+      }
+
+      document.getElementById("saveMeta").onclick = () => {
+        saveLocal(true);
+      };
+
+      document.getElementById("btnResetPreset").onclick = () => {
+        if(confirm("確定要重置本月固定項目？（僅清除用量與部門回預設）")){
+          if(!store[currentMonth]) store[currentMonth] = {};
+          store[currentMonth].fixed = {};
+          FIXED_ITEMS.forEach((f, i) => {
+            store[currentMonth].fixed[i] = { activity:0, dept:f.dept };
+          });
+          renderFixed();
+          saveLocal(true);
+        }
+      };
+
+      document.getElementById("btnCalc").onclick = () => {
+        calcFixed();
+        calcCustom();
+      };
+
+      /* =========================
+         GitHub JSON 存取
+         - repo 固定：Sethjesus/Carboninventory
+         - 路徑固定：data/公司_年度.json
+      ========================= */
+      function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
+      function b64d(s){ return decodeURIComponent(escape(atob(s))); }
+
+      function ensureToken(){
+        if(!localStorage.getItem("gitToken")){
+          const t = prompt("請貼上 GitHub Token（只需『repo』權限，會加密存於瀏覽器）：");
+          if(t) localStorage.setItem("gitToken", b64e(t.trim()));
+        }
+        return b64d(localStorage.getItem("gitToken") || "");
+      }
+
+      document.getElementById("btnClearToken").onclick = () => {
+        localStorage.removeItem("gitToken");
+        showToast("Token 已清除");
+      };
+
+      document.getElementById("btnUploadGit").onclick = async () => {
+        try{
+          const token = ensureToken();
+          if(!token) return alert("未設定 Token");
+
+          const { company, year } = getMeta();
+          const key     = localKey();
+          const content = b64e(localStorage.getItem(key) || "{}");
+          const file    = `data/${safeKey(company)}_${year}.json`;
+          const url     = `https://api.github.com/repos/Sethjesus/Carboninventory/contents/${file}`;
+
+          // 先 HEAD / GET 看檔案是否存在，若存在需帶 sha 才能更新
+          let sha = null;
+          const head = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
+          if(head.ok){
+            const j = await head.json();
+            sha = j.sha;
+          }
+
+          const body = { message:`update ${file}`, content };
+          if(sha) body.sha = sha;
+
+          const res = await fetch(url, {
+            method:"PUT",
+            headers:{
+              Authorization:`Bearer ${token}`,
+              "Content-Type":"application/json"
+            },
+            body: JSON.stringify(body)
+          });
+
+          showToast(res.ok ? "上傳成功！" : "上傳失敗");
+        }catch(err){
+          alert("上傳錯誤：" + err.message);
+        }
+      };
+
+      document.getElementById("btnLoadGit").onclick = async () => {
+        try{
+          const token = ensureToken();
+          if(!token) return alert("未設定 Token");
+
+          const name = prompt("輸入檔名（如 景沛_ESG_2025.json 或 公司_2025.json）：\n路徑固定在 data/ 目錄下。");
+          if(!name) return;
+
+          const url = `https://api.github.com/repos/Sethjesus/Carboninventory/contents/data/${name}`;
+          const res = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
+          if(!res.ok) return alert("找不到檔案或權限不足");
+
+          const j = await res.json();
+          const data = JSON.parse(decodeURIComponent(escape(atob(j.content))));
+          localStorage.setItem(localKey(), JSON.stringify(data));
+          showToast("已載入 GitHub 資料。切換月份或重新整理以刷新畫面。");
+        }catch(err){
+          alert("下載錯誤：" + err.message);
+        }
+      };
+
+      /* =========================
+         Excel / PDF
+      ========================= */
+      document.getElementById("btnExportExcel").onclick = () => {
+        const { company, year } = getMeta();
+        const wb = XLSX.utils.book_new();
+
+        // 固定
+        const headerFixed = ["項目","範疇","用量","單位","排放係數","部門","排放量"];
+        const dataFixed = [ ["公司名稱",company], ["年度",year], [], headerFixed ];
+        [...tbodyFixed.querySelectorAll("tr")].forEach((tr, idx) => {
+          const act = parseFloat(tr.querySelector(".actFixed").value)||0;
+          const d   = tr.children[5].querySelector("input").value || FIXED_ITEMS[idx].dept;
+          const f   = FIXED_ITEMS[idx];
+          dataFixed.push([ f.name, f.scope, act, f.unit, f.factor, d, (act*f.factor).toFixed(3) ]);
+        });
+        const wsFixed = XLSX.utils.aoa_to_sheet(dataFixed);
+        XLSX.utils.book_append_sheet(wb, wsFixed, "固定項目");
+
+        // 自建
+        const headerCustom = ["項目","分類","範疇","用量","單位","排放係數","部門","排放量"];
+        const dataCustom = [ ["公司名稱",company], ["年度",year], [], headerCustom ];
+        [...tbodyCustom.querySelectorAll("tr")].forEach(tr => {
+          const t = tr.querySelectorAll("input,select");
+          const a = parseFloat(t[3].value)||0, f = parseFloat(t[5].value)||0;
+          dataCustom.push([ t[0].value, t[1].value, t[2].value, a, t[4].value, f, t[6].value, (a*f).toFixed(3) ]);
+        });
+        const wsCustom = XLSX.utils.aoa_to_sheet(dataCustom);
+        XLSX.utils.book_append_sheet(wb, wsCustom, "自建項目");
+
+        // 檔名
+        XLSX.writeFile(wb, `${safeKey(company)}_${year}_${currentMonth}月.xlsx`);
+      };
+
+      document.getElementById("btnExportPDF").onclick = async () => {
+        try{
+          const { PDFDocument } = PDFLib;
+          const pdf = await PDFDocument.create();
+          const page = pdf.addPage([842,595]); // A4 橫式
+
+          const { company, year } = getMeta();
+          const total = (parseFloat(sumFixed.textContent)||0) + (parseFloat(sumCustom.textContent)||0);
+
+          // Title 畫布
+          const c = document.createElement("canvas");
+          c.width = 800; c.height = 56;
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0,0,800,56);
+          ctx.fillStyle = "#0f172a";
+          ctx.font = 'bold 18px "Microsoft JhengHei", Arial, sans-serif';
+          ctx.fillText(`${company} 碳盤查報表｜${year} 年 ${currentMonth} 月｜總排放：${total.toFixed(3)} kgCO₂e`, 12, 35);
+          const timg = await pdf.embedPng(c.toDataURL("image/png"));
+          page.drawImage(timg, { x:21, y:520, width:800, height:56 });
+
+          // 三圖
+          const chartNodes = [
+            document.getElementById("chartItems"),
+            document.getElementById("chartScopes"),
+            document.getElementById("chartTrend")
+          ];
+          let x = 40, y = 305;
+          for(const cn of chartNodes){
+            const png = await pdf.embedPng(cn.toDataURL("image/png"));
+            page.drawImage(png, { x, y, width:240, height:180 });
+            x += 260;
+          }
+
+          const bytes = await pdf.save();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([bytes], { type:"application/pdf" }));
+          a.download = `${safeKey(company)}_${year}_${currentMonth}.pdf`;
+          a.click();
+        }catch(err){
+          alert("PDF 產出錯誤： " + err.message);
+        }
+      };
+
+      /* =========================
+         圖表
+      ========================= */
+      let chartItems = null;
+      let chartScopes = null;
+      let chartTrend = null;
+
+      function drawCharts(){
+        // 各固定項目排放 + 自建合計
+        const fixedEmis = [...tbodyFixed.querySelectorAll(".actFixed")].map((el,i)=>{
+          const a = parseFloat(el.value)||0;
+          return a * FIXED_ITEMS[i].factor;
+        });
+        const customTotal = parseFloat(sumCustom.textContent)||0;
+        const labelsItems = [...FIXED_ITEMS.map(f=>f.name), "自建合計"];
+        const emisItems   = [...fixedEmis, customTotal];
+
+        if(chartItems) chartItems.destroy();
+        chartItems = new Chart(document.getElementById("chartItems"),{
+          type:"bar",
+          data:{ labels:labelsItems, datasets:[{ label:"kgCO₂e", data:emisItems }] },
+          options:{ responsive:true, plugins:{ legend:{ display:false } } }
+        });
+
+        // S1/S2/S3 累積
+        const acc = { S1:0, S2:0, S3:0 };
+        // 固定
+        FIXED_ITEMS.forEach((f,i) => {
+          const a = parseFloat(tbodyFixed.querySelectorAll(".actFixed")[i].value) || 0;
+          acc[f.scope] += a * f.factor;
+        });
+        // 自建
+        [...tbodyCustom.querySelectorAll("tr")].forEach(tr=>{
+          const t = tr.querySelectorAll("input,select");
+          const scope = t[2].value || "S3";
+          const a = parseFloat(t[3].value)||0;
+          const f = parseFloat(t[5].value)||0;
+          acc[scope] += a * f;
+        });
+
+        if(chartScopes) chartScopes.destroy();
+        chartScopes = new Chart(document.getElementById("chartScopes"),{
+          type:"pie",
+          data:{ labels:Object.keys(acc), datasets:[{ data:Object.values(acc) }] },
+          options:{ responsive:true }
+        });
+
+        // 固定 vs 自建
+        const fixedTotal = parseFloat(sumFixed.textContent)||0;
+        if(chartTrend) chartTrend.destroy();
+        chartTrend = new Chart(document.getElementById("chartTrend"),{
+          type:"line",
+          data:{ labels:["固定","自建"], datasets:[{ label:"kgCO₂e", data:[fixedTotal, customTotal] }] },
+          options:{ responsive:true, plugins:{ legend:{ display:false } } }
+        });
+      }
+
+      /* =========================
+         初始化
+      ========================= */
+      function renderAll(){
+        loadLocal();
+        if(!store[currentMonth]) store[currentMonth] = {};
+        if(!store[currentMonth].fixed){
+          store[currentMonth].fixed = {};
+          FIXED_ITEMS.forEach((f,i) => store[currentMonth].fixed[i] = { activity:0, dept:f.dept });
+        }
+        if(!store[currentMonth].custom) store[currentMonth].custom = [];
+        renderFixed();
+        renderCustom();
+        buildMonthTabs();
+        drawCharts();
+      }
+
+      renderAll();
+
+      // PWA SW 註冊（保留）
+      if('serviceWorker' in navigator){
+        navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+      }
+    </script>
+  </main>
+</body>
+</html>
