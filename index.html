@@ -2,14 +2,14 @@
 <html lang="zh-Hant">
 <head>
   <!-- =========================
-       🌿 ESG 碳盤查 v5.8.1 (Full)
+       🌿 ESG 碳盤查 v5.8.1 (Full, integrated)
        - 固定項目 + 自建項目（含部門）
        - 月份切換 / 即時計算
        - 圖表（項目條、範疇餅、固定vs自建走勢）
        - Excel（兩工作表）/ PDF 匯出
        - GitHub JSON 上傳 / 下載（data/公司_年度.json）
+       - 匯出 JSON（公司＋年度命名）
        - PWA (manifest + SW 註冊)
-       - 無行數精簡、完整可讀
      ========================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -181,6 +181,7 @@
         <button id="btnCalc" class="btn">重新計算</button>
         <button id="btnExportExcel" class="btn-ghost">匯出 Excel（固定＋自建）</button>
         <button id="btnExportPDF" class="btn-ghost">匯出 PDF（含 3 圖）</button>
+        <button id="btnDownloadJSON" class="btn-ghost">匯出 JSON（公司＋年度命名）</button>
         <button id="btnUploadGit" class="btn">⬆ 上傳至 GitHub（JSON）</button>
         <button id="btnLoadGit" class="btn-ghost">⬇ 從 GitHub 載入（JSON）</button>
         <button id="btnClearToken" class="btn-ghost">清除 Token</button>
@@ -209,7 +210,7 @@
       </div>
     </section>
 
-    <!-- 主程式 -->
+    <!-- 主程式說明 -->
     <section class="card">
       <h2 class="font-bold text-lg mb-3">⚙️ 程式碼（內嵌）</h2>
       <pre class="text-xs whitespace-pre-wrap leading-5 text-slate-600">本頁已內嵌完整 JS；以下為實際運作程式。</pre>
@@ -471,8 +472,8 @@
 
       /* =========================
          GitHub JSON 存取
-         - repo 固定：Sethjesus/Carboninventory
-         - 路徑固定：data/公司_年度.json
+         - repo：Sethjesus/carboninventory（已修正為全小寫）
+         - 路徑：data/公司_年度.json
       ========================= */
       function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
       function b64d(s){ return decodeURIComponent(escape(atob(s))); }
@@ -490,6 +491,21 @@
         showToast("Token 已清除");
       };
 
+      // 匯出 JSON（公司_年度.json）
+      document.getElementById("btnDownloadJSON").onclick = () => {
+        const { company, year } = getMeta();
+        const key = localKey();
+        const data = localStorage.getItem(key) || "{}";
+
+        const blob = new Blob([data], { type: "application/json;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${safeKey(company)}_${year}.json`; // 自動檔名
+        a.click();
+        URL.revokeObjectURL(a.href);
+      };
+
+      // 上傳到 GitHub（PUT /contents）
       document.getElementById("btnUploadGit").onclick = async () => {
         try{
           const token = ensureToken();
@@ -499,9 +515,9 @@
           const key     = localKey();
           const content = b64e(localStorage.getItem(key) || "{}");
           const file    = `data/${safeKey(company)}_${year}.json`;
-          const url     = `https://api.github.com/repos/Sethjesus/Carboninventory/contents/${file}`;
+          const url     = `https://api.github.com/repos/Sethjesus/carboninventory/contents/${file}`;
 
-          // 先 HEAD / GET 看檔案是否存在，若存在需帶 sha 才能更新
+          // 檢查是否已存在（存在要帶 sha）
           let sha = null;
           const head = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
           if(head.ok){
@@ -527,15 +543,16 @@
         }
       };
 
+      // 從 GitHub 載入（GET /contents）
       document.getElementById("btnLoadGit").onclick = async () => {
         try{
           const token = ensureToken();
           if(!token) return alert("未設定 Token");
 
-          const name = prompt("輸入檔名（如 景沛_ESG_2025.json 或 公司_2025.json）：\n路徑固定在 data/ 目錄下。");
-          if(!name) return;
+          const { company, year } = getMeta();
+          const file = `${safeKey(company)}_${year}.json`; // 直接用公司＋年度
+          const url = `https://api.github.com/repos/Sethjesus/carboninventory/contents/data/${file}`;
 
-          const url = `https://api.github.com/repos/Sethjesus/Carboninventory/contents/data/${name}`;
           const res = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
           if(!res.ok) return alert("找不到檔案或權限不足");
 
