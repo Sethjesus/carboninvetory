@@ -10,6 +10,7 @@
        - GitHub JSON 上傳 / 下載（data/公司_年度.json）
        - 匯出 JSON（公司＋年度命名）
        - PWA (manifest + SW 註冊)
+       - ✅ 修正 GitHub 上傳（token/accept/branch/UTF-8/錯誤訊息）
      ========================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -35,11 +36,7 @@
       --panel:#ffffff;
       --shadow:0 10px 28px rgba(2,6,23,.08);
     }
-    html,body{
-      margin:0; padding:0;
-      font-family:"Microsoft JhengHei",system-ui,Segoe UI,Arial,sans-serif;
-      color:var(--ink); background:var(--bg);
-    }
+    html,body{ margin:0; padding:0; font-family:"Microsoft JhengHei",system-ui,Segoe UI,Arial,sans-serif; color:var(--ink); background:var(--bg); }
     header{ position:sticky; top:0; z-index:10; background:linear-gradient(180deg,#ffffff 0%,#ffffffcc 100%); backdrop-filter:saturate(140%) blur(4px); border-bottom:1px solid #e5e7eb; }
     .card{ background:var(--panel); border-radius:1rem; box-shadow:var(--shadow); padding:1.25rem; }
     .btn{ background:var(--brand); color:#fff; border-radius:.6rem; padding:.5rem .95rem; font-weight:700; cursor:pointer; border:none; }
@@ -449,41 +446,46 @@
         store = JSON.parse(localStorage.getItem(localKey()) || "{}");
       }
 
-      document.getElementById("saveMeta").onclick = () => {
-        saveLocal(true);
-      };
+      document.getElementById("saveMeta").onclick = () => { saveLocal(true); };
 
       document.getElementById("btnResetPreset").onclick = () => {
         if(confirm("確定要重置本月固定項目？（僅清除用量與部門回預設）")){
           if(!store[currentMonth]) store[currentMonth] = {};
           store[currentMonth].fixed = {};
-          FIXED_ITEMS.forEach((f, i) => {
-            store[currentMonth].fixed[i] = { activity:0, dept:f.dept };
-          });
+          FIXED_ITEMS.forEach((f, i) => { store[currentMonth].fixed[i] = { activity:0, dept:f.dept }; });
           renderFixed();
           saveLocal(true);
         }
       };
 
-      document.getElementById("btnCalc").onclick = () => {
-        calcFixed();
-        calcCustom();
-      };
+      document.getElementById("btnCalc").onclick = () => { calcFixed(); calcCustom(); };
 
       /* =========================
-         GitHub JSON 存取
-         - repo：Sethjesus/carboninventory（已修正為全小寫）
+         GitHub JSON 存取（修正版）
+         - repo：Sethjesus/carboninventory（小寫）
          - 路徑：data/公司_年度.json
+         - 調整：token header、Accept、branch 指定、UTF-8 base64、完整錯誤訊息
       ========================= */
-      function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
-      function b64d(s){ return decodeURIComponent(escape(atob(s))); }
+      // UTF-8 <-> base64
+      function toBase64Utf8(str){
+        const bytes = new TextEncoder().encode(str);
+        let bin = "";
+        bytes.forEach(b => bin += String.fromCharCode(b));
+        return btoa(bin);
+      }
+      function fromBase64Utf8(b64){
+        const bin = atob(b64);
+        const bytes = Uint8Array.from([...bin].map(c=>c.charCodeAt(0)));
+        return new TextDecoder().decode(bytes);
+      }
 
       function ensureToken(){
         if(!localStorage.getItem("gitToken")){
-          const t = prompt("請貼上 GitHub Token（只需『repo』權限，會加密存於瀏覽器）：");
-          if(t) localStorage.setItem("gitToken", b64e(t.trim()));
+          const t = prompt("請貼上 GitHub Token（建議 fine-grained，給 Repository contents: Read and write）：");
+          if(t) localStorage.setItem("gitToken", toBase64Utf8(t.trim()));
         }
-        return b64d(localStorage.getItem("gitToken") || "");
+        const enc = localStorage.getItem("gitToken") || "";
+        return enc ? fromBase64Utf8(enc) : "";
       }
 
       document.getElementById("btnClearToken").onclick = () => {
@@ -513,31 +515,48 @@
 
           const { company, year } = getMeta();
           const key     = localKey();
-          const content = b64e(localStorage.getItem(key) || "{}");
+          const raw     = localStorage.getItem(key) || "{}";
+          const content = toBase64Utf8(raw);                // ✅ UTF-8 safe
+          const owner   = "Sethjesus";
+          const repo    = "carboninventory";               // 小寫
           const file    = `data/${safeKey(company)}_${year}.json`;
-          const url     = `https://api.github.com/repos/Sethjesus/carboninventory/contents/${file}`;
+          const branch  = "main";                           // 🔧 如 main 有保護，改可寫分支
+          const urlBase = `https://api.github.com/repos/${owner}/${repo}/contents/${file}`;
 
-          // 檢查是否已存在（存在要帶 sha）
+          // 先取 sha（若檔存在）
           let sha = null;
-          const head = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
-          if(head.ok){
-            const j = await head.json();
+          const headRes = await fetch(urlBase + `?ref=${encodeURIComponent(branch)}`, {
+            headers:{
+              "Authorization": `token ${token}`,          // ✅ 建議使用 token 前綴
+              "Accept": "application/vnd.github+json"
+            }
+          });
+          if(headRes.ok){
+            const j = await headRes.json();
             sha = j.sha;
           }
 
-          const body = { message:`update ${file}`, content };
-          if(sha) body.sha = sha;
+          const body = { message: `update ${file}` , content, branch };
+          if(sha) body.sha = sha; // 若存在需帶 sha
 
-          const res = await fetch(url, {
+          const res = await fetch(urlBase, {
             method:"PUT",
             headers:{
-              Authorization:`Bearer ${token}`,
+              "Authorization": `token ${token}`,
+              "Accept": "application/vnd.github+json",
               "Content-Type":"application/json"
             },
             body: JSON.stringify(body)
           });
 
-          showToast(res.ok ? "上傳成功！" : "上傳失敗");
+          const detail = await res.json().catch(()=> ({}));
+          if(!res.ok){
+            console.error("GitHub upload error:", res.status, detail);
+            alert(`上傳失敗（${res.status}）：${detail.message || "未知錯誤"}\n` +
+                  `${(detail.errors && JSON.stringify(detail.errors)) || ""}`);
+            return;
+          }
+          showToast("上傳成功！");
         }catch(err){
           alert("上傳錯誤：" + err.message);
         }
@@ -550,14 +569,20 @@
           if(!token) return alert("未設定 Token");
 
           const { company, year } = getMeta();
-          const file = `${safeKey(company)}_${year}.json`; // 直接用公司＋年度
-          const url = `https://api.github.com/repos/Sethjesus/carboninventory/contents/data/${file}`;
+          const owner = "Sethjesus";
+          const repo  = "carboninventory";
+          const file  = `${safeKey(company)}_${year}.json`;
+          const url   = `https://api.github.com/repos/${owner}/${repo}/contents/data/${file}`;
 
-          const res = await fetch(url, { headers:{ Authorization:`Bearer ${token}` }});
-          if(!res.ok) return alert("找不到檔案或權限不足");
+          const res = await fetch(url, { headers:{ "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" }});
+          if(!res.ok){
+            const detail = await res.json().catch(()=>({}));
+            return alert(`找不到檔案或權限不足（${res.status}）：${detail.message || ""}`);
+          }
 
           const j = await res.json();
-          const data = JSON.parse(decodeURIComponent(escape(atob(j.content))));
+          const dataStr = fromBase64Utf8(j.content || "");
+          const data = JSON.parse(dataStr || "{}");
           localStorage.setItem(localKey(), JSON.stringify(data));
           showToast("已載入 GitHub 資料。切換月份或重新整理以刷新畫面。");
         }catch(err){
