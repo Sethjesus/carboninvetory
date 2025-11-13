@@ -2,8 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <!-- =========================
-       🌿 ESG 碳盤查 v5.8.1 (Full, integrated)
-       + 簡易登入（帳號:1234 / 密碼:1234）
+       🌿 ESG 碳盤查 v5.8.1 (Full, integrated, Login + GitHub + Charts)
      ========================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -68,19 +67,13 @@
       font-weight:700;
       cursor:pointer;
     }
-    table{
-      width:100%;
-      border-collapse:collapse;
-    }
+    table{ width:100%; border-collapse:collapse; }
     th,td{
       padding:.55rem .6rem;
       border-bottom:1px solid #e5e7eb;
       text-align:left;
     }
-    th{
-      background:#f1f5f9;
-      font-weight:800;
-    }
+    th{ background:#f1f5f9; font-weight:800; }
     .num{text-align:right;}
     input,select{
       width:100%;
@@ -106,48 +99,70 @@
       opacity:1;
       transform:translateY(0);
     }
-    .hint{
-      font-size:.85rem;
-      color:#64748b;
+    .hint{ font-size:.85rem; color:#64748b; }
+    .k{ color:#0ea5e9; font-weight:700; }
+
+    /* ===== Login Overlay ===== */
+    #loginOverlay{
+      position:fixed;
+      inset:0;
+      background:rgba(15,23,42,0.72);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:99999;
     }
-    .k{
-      color:#0ea5e9;
-      font-weight:700;
+    #loginCard{
+      background:#ffffff;
+      border-radius:1rem;
+      box-shadow:0 20px 40px rgba(15,23,42,0.35);
+      padding:1.75rem 2rem;
+      width:320px;
+      max-width:90vw;
+    }
+    #loginCard h2{ margin:0 0 .75rem; font-size:1.2rem; font-weight:800; }
+    #loginCard label{ font-size:.9rem; font-weight:600; color:#475569; }
+    #loginCard input{
+      width:100%;
+      border:1px solid #e2e8f0;
+      border-radius:.5rem;
+      padding:.4rem .6rem;
+      margin-top:.15rem;
+      margin-bottom:.6rem;
+    }
+    #loginError{
+      font-size:.8rem;
+      color:#ef4444;
+      min-height:1em;
+      margin-bottom:.4rem;
     }
   </style>
 </head>
 
 <body>
-
-  <!-- ===== 登入頁（帳號 1234 / 密碼 1234） ===== -->
-  <div id="loginPage" class="min-h-screen flex items-center justify-center bg-slate-100">
-    <div class="card max-w-md w-full mx-4">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="text-3xl">🔐</div>
-        <div>
-          <div class="text-xl font-extrabold leading-tight">ESG 碳盤查登入</div>
-          <div class="text-xs text-slate-500">Demo 帳號：<span class="font-mono">1234 / 1234</span></div>
-        </div>
-      </div>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm mb-1">帳號</label>
-          <input id="loginUser" type="text" placeholder="請輸入帳號" value="" />
-        </div>
-        <div>
-          <label class="block text-sm mb-1">密碼</label>
-          <input id="loginPass" type="password" placeholder="請輸入密碼" value="" />
-        </div>
-        <div class="flex items-center justify-between mt-2">
-          <button id="btnLogin" class="btn">登入</button>
-          <span class="hint">※ 僅前端 Demo 用，非真正資安保護</span>
-        </div>
-      </div>
+  <!-- 登入遮罩（帳號 1234 / 密碼 1234） -->
+  <div id="loginOverlay">
+    <div id="loginCard">
+      <h2>🔐 ESG 碳盤查登入</h2>
+      <p style="font-size:.85rem;color:#64748b;margin:0 0 .75rem;">
+        請輸入帳號與密碼後開始使用。<br>
+        （預設：帳號 <b>1234</b>，密碼 <b>1234</b>）
+      </p>
+      <form id="loginForm">
+        <label>帳號</label>
+        <input id="loginUser" type="text" autocomplete="off" />
+        <label>密碼</label>
+        <input id="loginPass" type="password" autocomplete="off" />
+        <div id="loginError"></div>
+        <button type="submit" class="btn" style="width:100%;margin-top:.25rem;">
+          登入
+        </button>
+      </form>
     </div>
   </div>
 
-  <!-- ===== App Header ===== -->
-  <header class="px-4 hidden" id="appHeader">
+  <!-- ===== Header ===== -->
+  <header class="px-4">
     <div class="max-w-7xl mx-auto py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="text-2xl">🌿</div>
@@ -162,10 +177,10 @@
     </div>
   </header>
 
-  <div id="toast" class="hidden">已儲存</div>
+  <div id="toast">已儲存</div>
 
   <!-- ===== Main ===== -->
-  <main class="max-w-7xl mx-auto px-4 pb-28 hidden" id="appMain">
+  <main class="max-w-7xl mx-auto px-4 pb-28">
 
     <!-- 企業資訊 -->
     <section class="card mt-5">
@@ -307,40 +322,46 @@
 
     <script>
       /* =========================
-         🔐 簡易登入（帳號 / 密碼）
+         簡易登入（帳號/密碼 1234）
       ========================= */
       const LOGIN_USER = "1234";
       const LOGIN_PASS = "1234";
 
-      const loginPage   = document.getElementById("loginPage");
-      const appHeader   = document.getElementById("appHeader");
-      const appMain     = document.getElementById("appMain");
-      const toast       = document.getElementById("toast");
-      const loginUserEl = document.getElementById("loginUser");
-      const loginPassEl = document.getElementById("loginPass");
-      const btnLogin    = document.getElementById("btnLogin");
+      const loginOverlay = document.getElementById("loginOverlay");
+      const loginForm    = document.getElementById("loginForm");
+      const loginUser    = document.getElementById("loginUser");
+      const loginPass    = document.getElementById("loginPass");
+      const loginError   = document.getElementById("loginError");
 
-      function doLogin(){
-        const u = (loginUserEl.value || "").trim();
-        const p = (loginPassEl.value || "").trim();
-        if(u === LOGIN_USER && p === LOGIN_PASS){
-          // 顯示 App，隱藏登入頁
-          loginPage.classList.add("hidden");
-          appHeader.classList.remove("hidden");
-          appMain.classList.remove("hidden");
-          toast.classList.remove("hidden");
-        }else{
-          alert("帳號或密碼錯誤。請再試一次。");
+      function checkLogin() {
+        const ok = localStorage.getItem("ESG_LOGIN_OK") === "1";
+        if (ok) {
+          loginOverlay.style.display = "none";
+        } else {
+          loginOverlay.style.display = "flex";
+          loginUser.focus();
         }
       }
 
-      btnLogin.addEventListener("click", doLogin);
-      loginUserEl.addEventListener("keydown", e => {
-        if(e.key === "Enter") doLogin();
+      loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const u = (loginUser.value || "").trim();
+        const p = (loginPass.value || "").trim();
+        if (u === LOGIN_USER && p === LOGIN_PASS) {
+          localStorage.setItem("ESG_LOGIN_OK", "1");
+          loginError.textContent = "";
+          loginOverlay.style.opacity = "1";
+          loginOverlay.style.transition = "opacity .25s";
+          loginOverlay.style.opacity = "0";
+          setTimeout(() => {
+            loginOverlay.style.display = "none";
+          }, 260);
+        } else {
+          loginError.textContent = "帳號或密碼錯誤，請再試一次。";
+        }
       });
-      loginPassEl.addEventListener("keydown", e => {
-        if(e.key === "Enter") doLogin();
-      });
+
+      checkLogin();
 
       /* =========================
          主題切換（light/dark）
@@ -350,12 +371,10 @@
         document.documentElement.classList.toggle("dark", mode === "dark");
         localStorage.setItem("carbonTheme", mode);
       }
-      if(themeToggle){
-        themeToggle.onclick = () => {
-          const isDark = document.documentElement.classList.contains("dark");
-          applyTheme(isDark ? "light" : "dark");
-        };
-      }
+      themeToggle.onclick = () => {
+        const isDark = document.documentElement.classList.contains("dark");
+        applyTheme(isDark ? "light" : "dark");
+      };
       applyTheme(localStorage.getItem("carbonTheme") || "light");
 
       /* =========================
@@ -365,6 +384,7 @@
       const tbodyCustom = document.getElementById("tbodyCustom");
       const sumFixed    = document.getElementById("sumFixed");
       const sumCustom   = document.getElementById("sumCustom");
+      const toast       = document.getElementById("toast");
 
       let store = {};                               // 以 { 1..12: { fixed:{index:{activity,dept}}, custom:[...] } } 組成
       let currentMonth = new Date().getMonth() + 1; // 1~12
@@ -590,8 +610,9 @@
       document.getElementById("btnCalc").onclick = () => { calcFixed(); calcCustom(); };
 
       /* =========================
-         GitHub JSON 存取（修正版）
+         GitHub JSON 存取
       ========================= */
+
       // UTF-8 <-> base64
       function toBase64Utf8(str){
         const bytes = new TextEncoder().encode(str);
@@ -607,7 +628,7 @@
 
       function ensureToken(){
         if(!localStorage.getItem("gitToken")){
-          const t = prompt("請貼上 GitHub Token（建議 fine-grained，給 Repository contents: Read and write）：");
+          const t = prompt("請貼上 GitHub Token（Fine-grained；Contents: Read and write）：");
           if(t) localStorage.setItem("gitToken", toBase64Utf8(t.trim()));
         }
         const enc = localStorage.getItem("gitToken") || "";
@@ -619,7 +640,6 @@
         showToast("Token 已清除");
       };
 
-      // 匯出 JSON（公司_年度.json）
       document.getElementById("btnDownloadJSON").onclick = () => {
         const { company, year } = getMeta();
         const key = localKey();
@@ -628,35 +648,14 @@
         const blob = new Blob([data], { type: "application/json;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${safeKey(company)}_${year}.json`; // 自動檔名
+        a.download = `${safeKey(company)}_${year}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
       };
 
-      // === GitHub repo / branch 自動偵測基礎設定 ===
-      const OWNER = "Sethjesus";
-      function detectRepo(){
-        try{
-          if(location.hostname.endsWith("github.io")){
-            const parts = location.pathname.split("/").filter(Boolean);
-            return parts[0] || "carboninventory"; // 預設
-          }
-        }catch(e){}
-        return "carboninventory";
-      }
-      const REPO = detectRepo();
-      async function pickBranch(owner, repo){
-        const candidates = ["main","gh-pages","master"];
-        for(const b of candidates){
-          try{
-            const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches/${b}`,{
-              headers:{"Accept":"application/vnd.github+json"}
-            });
-            if(r.ok) return b;
-          }catch(e){}
-        }
-        return "main";
-      }
+      const GIT_OWNER  = "Sethjesus";
+      const GIT_REPO   = "carboninventory";
+      const GIT_BRANCH = "main";
 
       // 上傳到 GitHub（PUT /contents）
       document.getElementById("btnUploadGit").onclick = async () => {
@@ -665,36 +664,37 @@
           if(!token) return alert("未設定 Token");
 
           const { company, year } = getMeta();
+          const fileName = `${safeKey(company)}_${year}.json`;
+          const path     = `data/${fileName}`;
+          const url      = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${path}`;
+
           const key     = localKey();
           const raw     = localStorage.getItem(key) || "{}";
-          const content = toBase64Utf8(raw); // ✅ UTF-8 safe
+          const content = toBase64Utf8(raw);
 
-          const owner = OWNER;
-          const repo  = REPO;
-          const file  = `${safeKey(company)}_${year}.json`;
-          const branch = await pickBranch(owner, repo);
-          const urlBase = `https://api.github.com/repos/${owner}/${repo}/contents/data/${file}`;
-
-          // 先取 sha（若檔存在）
           let sha = null;
-          const headRes = await fetch(urlBase + `?ref=${encodeURIComponent(branch)}`, {
+          const headRes = await fetch(`${url}?ref=${GIT_BRANCH}`, {
             headers:{
-              "Authorization": `token ${token}`,
+              "Authorization": `Bearer ${token}`,
               "Accept": "application/vnd.github+json"
             }
           });
           if(headRes.ok){
             const j = await headRes.json();
-            sha = j.sha;
+            sha = j.sha || null;
           }
 
-          const body = { message: `update ${file}`, content, branch };
-          if(sha) body.sha = sha; // 若存在需帶 sha
+          const body = {
+            message: `Update ${fileName}`,
+            content,
+            branch: GIT_BRANCH
+          };
+          if(sha) body.sha = sha;
 
-          const res = await fetch(urlBase, {
+          const res = await fetch(url, {
             method:"PUT",
             headers:{
-              "Authorization": `token ${token}`,
+              "Authorization": `Bearer ${token}`,
               "Accept": "application/vnd.github+json",
               "Content-Type":"application/json"
             },
@@ -704,8 +704,7 @@
           const detail = await res.json().catch(()=> ({}));
           if(!res.ok){
             console.error("GitHub upload error:", res.status, detail);
-            alert(`上傳失敗（${res.status}）：${detail.message || "未知錯誤"}\n` +
-                  `${(detail.errors && JSON.stringify(detail.errors)) || ""}`);
+            alert(`上傳失敗（${res.status}）：${detail.message || "未知錯誤"}`);
             return;
           }
           showToast("上傳成功！");
@@ -721,18 +720,16 @@
           if(!token) return alert("未設定 Token");
 
           const { company, year } = getMeta();
-          const owner = OWNER;
-          const repo  = REPO;
-          const file  = `${safeKey(company)}_${year}.json`;
-          const branch = await pickBranch(owner, repo);
-          const url   = `https://api.github.com/repos/${owner}/${repo}/contents/data/${file}?ref=${encodeURIComponent(branch)}`;
+          const fileName = `${safeKey(company)}_${year}.json`;
+          const url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/data/${fileName}?ref=${GIT_BRANCH}`;
 
           const res = await fetch(url, {
             headers:{
-              "Authorization": `token ${token}`,
-              "Accept": "application/vnd.github+json"
+              "Authorization": `Bearer ${token}`,
+              "Accept":"application/vnd.github+json"
             }
           });
+
           if(!res.ok){
             const detail = await res.json().catch(()=>({}));
             return alert(`找不到檔案或權限不足（${res.status}）：${detail.message || ""}`);
@@ -755,7 +752,6 @@
         const { company, year } = getMeta();
         const wb = XLSX.utils.book_new();
 
-        // 固定
         const headerFixed = ["項目","範疇","用量","單位","排放係數","部門","排放量"];
         const dataFixed = [ ["公司名稱",company], ["年度",year], [], headerFixed ];
         [...tbodyFixed.querySelectorAll("tr")].forEach((tr, idx) => {
@@ -767,7 +763,6 @@
         const wsFixed = XLSX.utils.aoa_to_sheet(dataFixed);
         XLSX.utils.book_append_sheet(wb, wsFixed, "固定項目");
 
-        // 自建
         const headerCustom = ["項目","分類","範疇","用量","單位","排放係數","部門","排放量"];
         const dataCustom = [ ["公司名稱",company], ["年度",year], [], headerCustom ];
         [...tbodyCustom.querySelectorAll("tr")].forEach(tr => {
@@ -778,7 +773,6 @@
         const wsCustom = XLSX.utils.aoa_to_sheet(dataCustom);
         XLSX.utils.book_append_sheet(wb, wsCustom, "自建項目");
 
-        // 檔名
         XLSX.writeFile(wb, `${safeKey(company)}_${year}_${currentMonth}月.xlsx`);
       };
 
@@ -791,7 +785,6 @@
           const { company, year } = getMeta();
           const total = (parseFloat(sumFixed.textContent)||0) + (parseFloat(sumCustom.textContent)||0);
 
-          // Title 畫布
           const c = document.createElement("canvas");
           c.width = 800; c.height = 56;
           const ctx = c.getContext("2d");
@@ -803,7 +796,6 @@
           const timg = await pdf.embedPng(c.toDataURL("image/png"));
           page.drawImage(timg, { x:21, y:520, width:800, height:56 });
 
-          // 三圖
           const chartNodes = [
             document.getElementById("chartItems"),
             document.getElementById("chartScopes"),
@@ -836,50 +828,67 @@
       function drawCharts(){
         // 各固定項目排放 + 自建合計
         const fixedEmis = [...tbodyFixed.querySelectorAll(".actFixed")].map((el,i)=>{
-          const a = parseFloat(el.value)||0;
+          const a = parseFloat(el.value) || 0;
           return a * FIXED_ITEMS[i].factor;
         });
-        const customTotal = parseFloat(sumCustom.textContent)||0;
+        const customTotal = parseFloat(sumCustom.textContent) || 0;
         const labelsItems = [...FIXED_ITEMS.map(f=>f.name), "自建合計"];
         const emisItems   = [...fixedEmis, customTotal];
 
         if(chartItems) chartItems.destroy();
         chartItems = new Chart(document.getElementById("chartItems"),{
           type:"bar",
-          data:{ labels:labelsItems, datasets:[{ label:"kgCO₂e", data:emisItems }] },
-          options:{ responsive:true, plugins:{ legend:{ display:false } } }
+          data:{
+            labels: labelsItems,
+            datasets:[{ label:"kgCO₂e", data: emisItems }]
+          },
+          options:{
+            responsive:true,
+            plugins:{ legend:{ display:false } }
+          }
         });
 
-        // S1/S2/S3 累積
+        // S1 / S2 / S3 累積
         const acc = { S1:0, S2:0, S3:0 };
+
         // 固定
         FIXED_ITEMS.forEach((f,i) => {
           const a = parseFloat(tbodyFixed.querySelectorAll(".actFixed")[i].value) || 0;
           acc[f.scope] += a * f.factor;
         });
+
         // 自建
-        [...tbodyCustom.querySelectorAll("tr")].forEach(tr=>{
+        [...tbodyCustom.querySelectorAll("tr")].forEach(tr => {
           const t = tr.querySelectorAll("input,select");
           const scope = t[2].value || "S3";
-          const a = parseFloat(t[3].value)||0;
-          const f = parseFloat(t[5].value)||0;
+          const a = parseFloat(t[3].value) || 0;
+          const f = parseFloat(t[5].value) || 0;
           acc[scope] += a * f;
         });
 
         if(chartScopes) chartScopes.destroy();
         chartScopes = new Chart(document.getElementById("chartScopes"),{
           type:"pie",
-          data:{ labels:Object.keys(acc), datasets:[{ data:Object.values(acc) }] },
+          data:{
+            labels:Object.keys(acc),
+            datasets:[{ data:Object.values(acc) }]
+          },
           options:{ responsive:true }
         });
 
         // 固定 vs 自建
-        const fixedTotal = parseFloat(sumFixed.textContent)||0;
+        const fixedTotal = parseFloat(sumFixed.textContent) || 0;
         if(chartTrend) chartTrend.destroy();
         chartTrend = new Chart(document.getElementById("chartTrend"),{
           type:"line",
-          data:{ labels:["固定","自建"], datasets:[{ label:"kgCO₂e", data:[fixedTotal, customTotal] }] },
-          options:{ responsive:true, plugins:{ legend:{ display:false } } }
+          data:{
+            labels:["固定","自建"],
+            datasets:[{ label:"kgCO₂e", data:[fixedTotal, customTotal] }]
+          },
+          options:{
+            responsive:true,
+            plugins:{ legend:{ display:false } }
+          }
         });
       }
 
@@ -902,7 +911,7 @@
 
       renderAll();
 
-      // PWA SW 註冊（保留）
+      // PWA SW 註冊
       if('serviceWorker' in navigator){
         navigator.serviceWorker.register('service-worker.js').catch(()=>{});
       }
