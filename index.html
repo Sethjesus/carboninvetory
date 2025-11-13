@@ -3,14 +3,7 @@
 <head>
   <!-- =========================
        🌿 ESG 碳盤查 v5.8.1 (Full, integrated)
-       - 固定項目 + 自建項目（含部門）
-       - 月份切換 / 即時計算
-       - 圖表（項目條、範疇餅、固定vs自建走勢）
-       - Excel（兩工作表）/ PDF 匯出
-       - GitHub JSON 上傳 / 下載（data/公司_年度.json）
-       - 匯出 JSON（公司＋年度命名）
-       - PWA (manifest + SW 註冊)
-       - ✅ 修正 GitHub 上傳（token/accept/branch/UTF-8/錯誤訊息）
+       + 簡易登入（帳號:1234 / 密碼:1234）
      ========================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -36,26 +29,125 @@
       --panel:#ffffff;
       --shadow:0 10px 28px rgba(2,6,23,.08);
     }
-    html,body{ margin:0; padding:0; font-family:"Microsoft JhengHei",system-ui,Segoe UI,Arial,sans-serif; color:var(--ink); background:var(--bg); }
-    header{ position:sticky; top:0; z-index:10; background:linear-gradient(180deg,#ffffff 0%,#ffffffcc 100%); backdrop-filter:saturate(140%) blur(4px); border-bottom:1px solid #e5e7eb; }
-    .card{ background:var(--panel); border-radius:1rem; box-shadow:var(--shadow); padding:1.25rem; }
-    .btn{ background:var(--brand); color:#fff; border-radius:.6rem; padding:.5rem .95rem; font-weight:700; cursor:pointer; border:none; }
-    .btn-ghost{ border:1px dashed #94a3b8; color:#334155; background:transparent; border-radius:.6rem; padding:.5rem .95rem; font-weight:700; cursor:pointer; }
-    table{ width:100%; border-collapse:collapse; }
-    th,td{ padding:.55rem .6rem; border-bottom:1px solid #e5e7eb; text-align:left; }
-    th{ background:#f1f5f9; font-weight:800; }
+    html,body{
+      margin:0;
+      padding:0;
+      font-family:"Microsoft JhengHei",system-ui,Segoe UI,Arial,sans-serif;
+      color:var(--ink);
+      background:var(--bg);
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:linear-gradient(180deg,#ffffff 0%,#ffffffcc 100%);
+      backdrop-filter:saturate(140%) blur(4px);
+      border-bottom:1px solid #e5e7eb;
+    }
+    .card{
+      background:var(--panel);
+      border-radius:1rem;
+      box-shadow:var(--shadow);
+      padding:1.25rem;
+    }
+    .btn{
+      background:var(--brand);
+      color:#fff;
+      border-radius:.6rem;
+      padding:.5rem .95rem;
+      font-weight:700;
+      cursor:pointer;
+      border:none;
+    }
+    .btn-ghost{
+      border:1px dashed #94a3b8;
+      color:#334155;
+      background:transparent;
+      border-radius:.6rem;
+      padding:.5rem .95rem;
+      font-weight:700;
+      cursor:pointer;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+    }
+    th,td{
+      padding:.55rem .6rem;
+      border-bottom:1px solid #e5e7eb;
+      text-align:left;
+    }
+    th{
+      background:#f1f5f9;
+      font-weight:800;
+    }
     .num{text-align:right;}
-    input,select{ width:100%; border:1px solid #e5e7eb; border-radius:.5rem; padding:.35rem .5rem; }
-    #toast{ position:fixed; right:24px; bottom:28px; background:var(--brand); color:#fff; font-weight:800; padding:.5rem .9rem; border-radius:.7rem; opacity:0; transform:translateY(16px); transition:.35s; z-index:9999; }
-    #toast.show{ opacity:1; transform:translateY(0); }
-    .hint{ font-size:.85rem; color:#64748b; }
-    .k{ color:#0ea5e9; font-weight:700; }
+    input,select{
+      width:100%;
+      border:1px solid #e5e7eb;
+      border-radius:.5rem;
+      padding:.35rem .5rem;
+    }
+    #toast{
+      position:fixed;
+      right:24px;
+      bottom:28px;
+      background:var(--brand);
+      color:#fff;
+      font-weight:800;
+      padding:.5rem .9rem;
+      border-radius:.7rem;
+      opacity:0;
+      transform:translateY(16px);
+      transition:.35s;
+      z-index:9999;
+    }
+    #toast.show{
+      opacity:1;
+      transform:translateY(0);
+    }
+    .hint{
+      font-size:.85rem;
+      color:#64748b;
+    }
+    .k{
+      color:#0ea5e9;
+      font-weight:700;
+    }
   </style>
 </head>
 
 <body>
-  <!-- ===== Header ===== -->
-  <header class="px-4">
+
+  <!-- ===== 登入頁（帳號 1234 / 密碼 1234） ===== -->
+  <div id="loginPage" class="min-h-screen flex items-center justify-center bg-slate-100">
+    <div class="card max-w-md w-full mx-4">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="text-3xl">🔐</div>
+        <div>
+          <div class="text-xl font-extrabold leading-tight">ESG 碳盤查登入</div>
+          <div class="text-xs text-slate-500">Demo 帳號：<span class="font-mono">1234 / 1234</span></div>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">帳號</label>
+          <input id="loginUser" type="text" placeholder="請輸入帳號" value="" />
+        </div>
+        <div>
+          <label class="block text-sm mb-1">密碼</label>
+          <input id="loginPass" type="password" placeholder="請輸入密碼" value="" />
+        </div>
+        <div class="flex items-center justify-between mt-2">
+          <button id="btnLogin" class="btn">登入</button>
+          <span class="hint">※ 僅前端 Demo 用，非真正資安保護</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== App Header ===== -->
+  <header class="px-4 hidden" id="appHeader">
     <div class="max-w-7xl mx-auto py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="text-2xl">🌿</div>
@@ -70,10 +162,10 @@
     </div>
   </header>
 
-  <div id="toast">已儲存</div>
+  <div id="toast" class="hidden">已儲存</div>
 
   <!-- ===== Main ===== -->
-  <main class="max-w-7xl mx-auto px-4 pb-28">
+  <main class="max-w-7xl mx-auto px-4 pb-28 hidden" id="appMain">
 
     <!-- 企業資訊 -->
     <section class="card mt-5">
@@ -215,6 +307,42 @@
 
     <script>
       /* =========================
+         🔐 簡易登入（帳號 / 密碼）
+      ========================= */
+      const LOGIN_USER = "1234";
+      const LOGIN_PASS = "1234";
+
+      const loginPage   = document.getElementById("loginPage");
+      const appHeader   = document.getElementById("appHeader");
+      const appMain     = document.getElementById("appMain");
+      const toast       = document.getElementById("toast");
+      const loginUserEl = document.getElementById("loginUser");
+      const loginPassEl = document.getElementById("loginPass");
+      const btnLogin    = document.getElementById("btnLogin");
+
+      function doLogin(){
+        const u = (loginUserEl.value || "").trim();
+        const p = (loginPassEl.value || "").trim();
+        if(u === LOGIN_USER && p === LOGIN_PASS){
+          // 顯示 App，隱藏登入頁
+          loginPage.classList.add("hidden");
+          appHeader.classList.remove("hidden");
+          appMain.classList.remove("hidden");
+          toast.classList.remove("hidden");
+        }else{
+          alert("帳號或密碼錯誤。請再試一次。");
+        }
+      }
+
+      btnLogin.addEventListener("click", doLogin);
+      loginUserEl.addEventListener("keydown", e => {
+        if(e.key === "Enter") doLogin();
+      });
+      loginPassEl.addEventListener("keydown", e => {
+        if(e.key === "Enter") doLogin();
+      });
+
+      /* =========================
          主題切換（light/dark）
       ========================= */
       const themeToggle = document.getElementById("themeToggle");
@@ -222,10 +350,12 @@
         document.documentElement.classList.toggle("dark", mode === "dark");
         localStorage.setItem("carbonTheme", mode);
       }
-      themeToggle.onclick = () => {
-        const isDark = document.documentElement.classList.contains("dark");
-        applyTheme(isDark ? "light" : "dark");
-      };
+      if(themeToggle){
+        themeToggle.onclick = () => {
+          const isDark = document.documentElement.classList.contains("dark");
+          applyTheme(isDark ? "light" : "dark");
+        };
+      }
       applyTheme(localStorage.getItem("carbonTheme") || "light");
 
       /* =========================
@@ -235,7 +365,6 @@
       const tbodyCustom = document.getElementById("tbodyCustom");
       const sumFixed    = document.getElementById("sumFixed");
       const sumCustom   = document.getElementById("sumCustom");
-      const toast       = document.getElementById("toast");
 
       let store = {};                               // 以 { 1..12: { fixed:{index:{activity,dept}}, custom:[...] } } 組成
       let currentMonth = new Date().getMonth() + 1; // 1~12
@@ -462,9 +591,6 @@
 
       /* =========================
          GitHub JSON 存取（修正版）
-         - repo：Sethjesus/carboninventory（小寫）
-         - 路徑：data/公司_年度.json
-         - 調整：token header、Accept、branch 指定、UTF-8 base64、完整錯誤訊息
       ========================= */
       // UTF-8 <-> base64
       function toBase64Utf8(str){
@@ -507,6 +633,31 @@
         URL.revokeObjectURL(a.href);
       };
 
+      // === GitHub repo / branch 自動偵測基礎設定 ===
+      const OWNER = "Sethjesus";
+      function detectRepo(){
+        try{
+          if(location.hostname.endsWith("github.io")){
+            const parts = location.pathname.split("/").filter(Boolean);
+            return parts[0] || "carboninventory"; // 預設
+          }
+        }catch(e){}
+        return "carboninventory";
+      }
+      const REPO = detectRepo();
+      async function pickBranch(owner, repo){
+        const candidates = ["main","gh-pages","master"];
+        for(const b of candidates){
+          try{
+            const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches/${b}`,{
+              headers:{"Accept":"application/vnd.github+json"}
+            });
+            if(r.ok) return b;
+          }catch(e){}
+        }
+        return "main";
+      }
+
       // 上傳到 GitHub（PUT /contents）
       document.getElementById("btnUploadGit").onclick = async () => {
         try{
@@ -516,18 +667,19 @@
           const { company, year } = getMeta();
           const key     = localKey();
           const raw     = localStorage.getItem(key) || "{}";
-          const content = toBase64Utf8(raw);                // ✅ UTF-8 safe
-          const owner   = "Sethjesus";
-          const repo    = "carboninventory";               // 小寫
-          const file    = `data/${safeKey(company)}_${year}.json`;
-          const branch  = "main";                           // 🔧 如 main 有保護，改可寫分支
-          const urlBase = `https://api.github.com/repos/${owner}/${repo}/contents/${file}`;
+          const content = toBase64Utf8(raw); // ✅ UTF-8 safe
+
+          const owner = OWNER;
+          const repo  = REPO;
+          const file  = `${safeKey(company)}_${year}.json`;
+          const branch = await pickBranch(owner, repo);
+          const urlBase = `https://api.github.com/repos/${owner}/${repo}/contents/data/${file}`;
 
           // 先取 sha（若檔存在）
           let sha = null;
           const headRes = await fetch(urlBase + `?ref=${encodeURIComponent(branch)}`, {
             headers:{
-              "Authorization": `token ${token}`,          // ✅ 建議使用 token 前綴
+              "Authorization": `token ${token}`,
               "Accept": "application/vnd.github+json"
             }
           });
@@ -536,7 +688,7 @@
             sha = j.sha;
           }
 
-          const body = { message: `update ${file}` , content, branch };
+          const body = { message: `update ${file}`, content, branch };
           if(sha) body.sha = sha; // 若存在需帶 sha
 
           const res = await fetch(urlBase, {
@@ -569,12 +721,18 @@
           if(!token) return alert("未設定 Token");
 
           const { company, year } = getMeta();
-          const owner = "Sethjesus";
-          const repo  = "carboninventory";
+          const owner = OWNER;
+          const repo  = REPO;
           const file  = `${safeKey(company)}_${year}.json`;
-          const url   = `https://api.github.com/repos/${owner}/${repo}/contents/data/${file}`;
+          const branch = await pickBranch(owner, repo);
+          const url   = `https://api.github.com/repos/${owner}/${repo}/contents/data/${file}?ref=${encodeURIComponent(branch)}`;
 
-          const res = await fetch(url, { headers:{ "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" }});
+          const res = await fetch(url, {
+            headers:{
+              "Authorization": `token ${token}`,
+              "Accept": "application/vnd.github+json"
+            }
+          });
           if(!res.ok){
             const detail = await res.json().catch(()=>({}));
             return alert(`找不到檔案或權限不足（${res.status}）：${detail.message || ""}`);
