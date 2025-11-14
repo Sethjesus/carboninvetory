@@ -322,7 +322,7 @@
 
     <script>
       /* =========================
-         簡易登入（帳號/密碼 1234）
+         簡易登入（帳號/密碼 1234）→ 每次都要登入
       ========================= */
       const LOGIN_USER = "1234";
       const LOGIN_PASS = "1234";
@@ -333,24 +333,20 @@
       const loginPass    = document.getElementById("loginPass");
       const loginError   = document.getElementById("loginError");
 
+      // 每次載入都強制顯示登入畫面
       function checkLogin() {
-        const ok = localStorage.getItem("ESG_LOGIN_OK") === "1";
-        if (ok) {
-          loginOverlay.style.display = "none";
-        } else {
-          loginOverlay.style.display = "flex";
-          loginUser.focus();
-        }
+        loginOverlay.style.display = "flex";
+        loginOverlay.style.opacity = "1";
+        loginUser.focus();
       }
 
+      // 登入送出
       loginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const u = (loginUser.value || "").trim();
         const p = (loginPass.value || "").trim();
         if (u === LOGIN_USER && p === LOGIN_PASS) {
-          localStorage.setItem("ESG_LOGIN_OK", "1");
           loginError.textContent = "";
-          loginOverlay.style.opacity = "1";
           loginOverlay.style.transition = "opacity .25s";
           loginOverlay.style.opacity = "0";
           setTimeout(() => {
