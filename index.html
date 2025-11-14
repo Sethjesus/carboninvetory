@@ -2,11 +2,13 @@
 <html lang="zh-Hant">
 <head>
   <!-- =========================
-       🌿 ESG 碳盤查 v5.8.1 (Full, integrated, Login + GitHub + Charts)
+       🌿 ESG 碳盤查 v5.9 企業多人版
+       - 本機儲存 + JSON 匯入/匯出
+       - OneDrive 協作 + 最後更新紀錄
      ========================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🌿 ESG 碳盤查 v5.8.1 Full</title>
+  <title>🌿 ESG 碳盤查 v5.9 企業多人版</title>
 
   <!-- ===== PWA ===== -->
   <meta name="theme-color" content="#16a34a" />
@@ -167,8 +169,10 @@
       <div class="flex items-center gap-3">
         <div class="text-2xl">🌿</div>
         <div>
-          <div class="text-xl font-extrabold leading-tight">ESG 碳盤查 v5.8.1</div>
-          <div class="text-xs text-slate-500">固定＋自建＋部門＋Excel/PDF＋Git JSON＋PWA</div>
+          <div class="text-xl font-extrabold leading-tight">ESG 碳盤查 v5.9 企業多人版</div>
+          <div class="text-xs text-slate-500">
+            固定＋自建＋部門＋Excel/PDF＋本機 JSON 匯入/匯出＋OneDrive 協作＋PWA
+          </div>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -179,13 +183,21 @@
 
   <div id="toast">已儲存</div>
 
+  <!-- 隱藏的檔案選擇器（匯入 JSON 用） -->
+  <input type="file" id="fileJSON" accept="application/json" style="display:none;" />
+
   <!-- ===== Main ===== -->
   <main class="max-w-7xl mx-auto px-4 pb-28">
 
     <!-- 企業資訊 -->
     <section class="card mt-5">
-      <h2 class="font-bold text-lg mb-3">🏢 企業資訊</h2>
-      <div class="grid md:grid-cols-3 gap-4">
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="font-bold text-lg">🏢 企業資訊</h2>
+        <div id="metaInfo" class="text-xs text-slate-500 text-right">
+          尚未有遠端共享紀錄。
+        </div>
+      </div>
+      <div class="grid md:grid-cols-4 gap-4">
         <div>
           <label class="block text-sm mb-1">公司名稱</label>
           <input id="companyName" type="text" value="景沛 ESG" placeholder="請輸入公司名稱" />
@@ -194,9 +206,13 @@
           <label class="block text-sm mb-1">年度（西元年）</label>
           <input id="fiscalYear" type="number" value="2025" min="2000" max="2100" step="1" />
         </div>
+        <div>
+          <label class="block text-sm mb-1">操作人姓名</label>
+          <input id="operatorName" type="text" value="" placeholder="例如：Jacky / 小美" />
+        </div>
         <div class="flex items-end gap-2">
-          <button id="saveMeta" class="btn">儲存公司/年度</button>
-          <span class="hint">將以 <span class="k">公司＋年度</span> 作為資料命名空間</span>
+          <button id="saveMeta" class="btn">儲存公司/年度/操作人</button>
+          <span class="hint">將以 <span class="k">公司＋年度</span> 作為資料命名空間。</span>
         </div>
       </div>
     </section>
@@ -205,7 +221,9 @@
     <section class="card">
       <h2 class="font-bold text-lg mb-3">📅 月份選擇</h2>
       <div id="monthTabs" class="flex flex-wrap gap-2"></div>
-      <div class="hint mt-2">切換月份前會自動儲存。</div>
+      <div class="hint mt-2">
+        切換月份前會自動儲存。上次使用的公司 / 年度 / 月份會自動帶入。
+      </div>
     </section>
 
     <!-- 固定項目 -->
@@ -278,20 +296,37 @@
       </div>
     </section>
 
-    <!-- 功能列 -->
+    <!-- 功能列（含 OneDrive 說明） -->
     <section class="card">
-      <h2 class="font-bold text-lg mb-3">💾 功能列</h2>
+      <h2 class="font-bold text-lg mb-3">💾 功能列（多人共用 + OneDrive）</h2>
       <div class="flex flex-wrap gap-3">
         <button id="btnCalc" class="btn">重新計算</button>
         <button id="btnExportExcel" class="btn-ghost">匯出 Excel（固定＋自建）</button>
         <button id="btnExportPDF" class="btn-ghost">匯出 PDF（含 3 圖）</button>
-        <button id="btnDownloadJSON" class="btn-ghost">匯出 JSON（公司＋年度命名）</button>
-        <button id="btnUploadGit" class="btn">⬆ 上傳至 GitHub（JSON）</button>
-        <button id="btnLoadGit" class="btn-ghost">⬇ 從 GitHub 載入（JSON）</button>
-        <button id="btnClearToken" class="btn-ghost">清除 Token</button>
+        <button id="btnDownloadJSON" class="btn-ghost">💾 一鍵存檔（下載共享檔）</button>
+        <button id="btnImportJSON" class="btn-ghost">📂 從共享檔案匯入</button>
+
+        <!-- 🔗 直接開啟你的 OneDrive 共享資料夾 -->
+        <a href="https://1drv.ms/f/c/8ef63fdd92f9370f/EniPxLP34YdPi-MJWpVuOQwBl9nH9ZNRfLkuiQRXYNhTzw?e=1PS5ox" 
+           target="_blank"
+           class="btn-ghost"
+           style="text-decoration:none; display:flex; align-items:center;">
+           🔗 打開 OneDrive 共用資料夾
+        </a>
       </div>
+
       <div class="hint mt-2">
-        GitHub 檔名：<span class="k">data/公司_年度.json</span>（公司會做檔名安全處理）。首次上傳會詢問 Token，保存在瀏覽器 localStorage。
+        ✅ <b>多人協作（建議流程）</b><br>
+        1️⃣ 任一台電腦填完後按「<b>💾 一鍵存檔</b>」→ 會下載 <span class="k">公司_年度.json</span>（例如：景沛ESG_2025.json）。<br>
+        2️⃣ 將此檔案放到公司 OneDrive 共享資料夾：<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<a href="https://1drv.ms/f/c/8ef63fdd92f9370f/EniPxLP34YdPi-MJWpVuOQwBl9nH9ZNRfLkuiQRXYNhTzw?e=1PS5ox" 
+           target="_blank" style="color:#0ea5e9;">👉 點我開啟 ESG 共用資料夾</a><br>
+        3️⃣ 其他電腦要編輯時：<br>
+        &nbsp;&nbsp;• 若有 OneDrive 同步程式 → 匯入時直接從 OneDrive 資料夾選這個 JSON 檔。<br>
+        &nbsp;&nbsp;• 若只有 OneDrive 網頁 → 請先從 OneDrive 下載 JSON 檔到本機，再按「📂 從共享檔案匯入」選檔。<br>
+        4️⃣ 修改完成後，再按一次「💾 一鍵存檔」，並用新檔案覆蓋 OneDrive 中的舊檔。<br><br>
+        🔁 建議全公司使用「同一個固定檔名」，例如：<span class="k">景沛ESG_2025.json</span>，避免版本混亂。<br>
+        ℹ 此系統會在 JSON 裡加入 <span class="k">_meta</span> 欄位，記錄公司、年度、操作人、最後更新時間。
       </div>
     </section>
 
@@ -317,7 +352,14 @@
     <!-- 主程式說明 -->
     <section class="card">
       <h2 class="font-bold text-lg mb-3">⚙️ 程式碼（內嵌）</h2>
-      <pre class="text-xs whitespace-pre-wrap leading-5 text-slate-600">本頁已內嵌完整 JS；以下為實際運作程式。</pre>
+      <pre class="text-xs whitespace-pre-wrap leading-5 text-slate-600">
+本頁已內嵌完整 JS：
+- 登入（1234/1234）
+- localStorage 自動記錄（含公司 / 年度 / 月份）
+- _meta：公司 / 年度 / 操作人 / 最後更新時間
+- 本機 JSON 一鍵存檔 / 匯入（搭配 OneDrive）
+- Excel / PDF / 圖表輸出
+      </pre>
     </section>
 
     <script>
@@ -327,20 +369,21 @@
       const LOGIN_USER = "1234";
       const LOGIN_PASS = "1234";
 
+      // 記錄上次公司 / 年度 / 月份
+      const META_KEY = "ESGv59_meta";
+
       const loginOverlay = document.getElementById("loginOverlay");
       const loginForm    = document.getElementById("loginForm");
       const loginUser    = document.getElementById("loginUser");
       const loginPass    = document.getElementById("loginPass");
       const loginError   = document.getElementById("loginError");
 
-      // 每次載入都強制顯示登入畫面
       function checkLogin() {
         loginOverlay.style.display = "flex";
         loginOverlay.style.opacity = "1";
         loginUser.focus();
       }
 
-      // 登入送出
       loginForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const u = (loginUser.value || "").trim();
@@ -381,8 +424,10 @@
       const sumFixed    = document.getElementById("sumFixed");
       const sumCustom   = document.getElementById("sumCustom");
       const toast       = document.getElementById("toast");
+      const fileJSON    = document.getElementById("fileJSON");
+      const metaInfo    = document.getElementById("metaInfo");
 
-      let store = {};                               // 以 { 1..12: { fixed:{index:{activity,dept}}, custom:[...] } } 組成
+      let store = {};                               // { _meta:{...}, 1..12: { fixed:{...}, custom:[...] } }
       let currentMonth = new Date().getMonth() + 1; // 1~12
 
       /* =========================
@@ -412,13 +457,47 @@
       const safeKey = (s) => (s || "公司").replace(/[\\\/:*?"<>|.\s]+/g, "_");
 
       function getMeta(){
-        const company = (document.getElementById("companyName").value || "公司").trim();
-        const year    = parseInt(document.getElementById("fiscalYear").value) || new Date().getFullYear();
-        return { company, year };
+        const company  = (document.getElementById("companyName").value || "公司").trim();
+        const year     = parseInt(document.getElementById("fiscalYear").value) || new Date().getFullYear();
+        const operator = (document.getElementById("operatorName").value || "").trim();
+        return { company, year, operator };
       }
       function localKey(){
         const m = getMeta();
-        return `ESGv581__${safeKey(m.company)}__${m.year}`;
+        return `ESGv59__${safeKey(m.company)}__${m.year}`;
+      }
+
+      // 記錄最後一次使用的公司 / 年度 / 月份
+      function saveMetaOnly(){
+        const { company, year, operator } = getMeta();
+        const meta = { company, year, month: currentMonth, operator };
+        localStorage.setItem(META_KEY, JSON.stringify(meta));
+      }
+
+      function updateMetaInfo(){
+        if(!metaInfo) return;
+        const m = store._meta;
+        if(!m || !m.lastUpdated){
+          metaInfo.textContent = "尚未有遠端共享紀錄。";
+          return;
+        }
+        let txt = "";
+        try{
+          const d = new Date(m.lastUpdated);
+          if(!isNaN(d.getTime())){
+            const y = d.getFullYear();
+            const mo = String(d.getMonth()+1).padStart(2,"0");
+            const da = String(d.getDate()).padStart(2,"0");
+            const hh = String(d.getHours()).padStart(2,"0");
+            const mm = String(d.getMinutes()).padStart(2,"0");
+            txt = `最後更新：${y}-${mo}-${da} ${hh}:${mm}（操作人：${m.operator||"未填"}）`;
+          }else{
+            txt = `最後更新：${m.lastUpdated}（操作人：${m.operator||"未填"}）`;
+          }
+        }catch(e){
+          txt = `最後更新：${m.lastUpdated}（操作人：${m.operator||"未填"}）`;
+        }
+        metaInfo.textContent = txt;
       }
 
       /* =========================
@@ -432,9 +511,10 @@
           b.textContent = m + "月";
           b.className = "btn-ghost " + (m===currentMonth ? "bg-green-100" : "");
           b.onclick = () => {
-            saveLocal(false);     // 切換前先存
+            saveLocal(false);   // 切換前先存
             currentMonth = m;
-            renderAll();         // 重新讀取並渲染
+            saveMetaOnly();     // 同步記錄最後使用月份
+            renderAll();
           };
           host.appendChild(b);
         }
@@ -549,7 +629,6 @@
         drawCharts();
       }
 
-      // 綁定事件（固定 / 自建）
       tbodyFixed .addEventListener("input", calcFixed);
       tbodyCustom.addEventListener("input",  calcCustom);
       tbodyCustom.addEventListener("click", (e) => {
@@ -583,15 +662,28 @@
       function saveLocal(showToastNow=true){
         if(!store[currentMonth]) store[currentMonth] = {};
         store[currentMonth].custom = packCustomRows();
+
+        // meta 寫進 store._meta，會一起被存到 JSON
+        const { company, year, operator } = getMeta();
+        const lastUpdated = new Date().toISOString();
+        store._meta = { company, year, operator: operator || "未填", lastUpdated };
+
         localStorage.setItem(localKey(), JSON.stringify(store));
+        saveMetaOnly();
+        updateMetaInfo();
+
         if(showToastNow) showToast("已儲存");
       }
 
       function loadLocal(){
         store = JSON.parse(localStorage.getItem(localKey()) || "{}");
+        if(!store || typeof store !== "object") store = {};
       }
 
-      document.getElementById("saveMeta").onclick = () => { saveLocal(true); };
+      document.getElementById("saveMeta").onclick = () => {
+        saveMetaOnly();
+        saveLocal(true);
+      };
 
       document.getElementById("btnResetPreset").onclick = () => {
         if(confirm("確定要重置本月固定項目？（僅清除用量與部門回預設）")){
@@ -606,40 +698,17 @@
       document.getElementById("btnCalc").onclick = () => { calcFixed(); calcCustom(); };
 
       /* =========================
-         GitHub JSON 存取
+         JSON 匯出 / 匯入（本機 + OneDrive 手動搬檔）
       ========================= */
 
-      // UTF-8 <-> base64
-      function toBase64Utf8(str){
-        const bytes = new TextEncoder().encode(str);
-        let bin = "";
-        bytes.forEach(b => bin += String.fromCharCode(b));
-        return btoa(bin);
-      }
-      function fromBase64Utf8(b64){
-        const bin = atob(b64);
-        const bytes = Uint8Array.from([...bin].map(c=>c.charCodeAt(0)));
-        return new TextDecoder().decode(bytes);
-      }
-
-      function ensureToken(){
-        if(!localStorage.getItem("gitToken")){
-          const t = prompt("請貼上 GitHub Token（Fine-grained；Contents: Read and write）：");
-          if(t) localStorage.setItem("gitToken", toBase64Utf8(t.trim()));
-        }
-        const enc = localStorage.getItem("gitToken") || "";
-        return enc ? fromBase64Utf8(enc) : "";
-      }
-
-      document.getElementById("btnClearToken").onclick = () => {
-        localStorage.removeItem("gitToken");
-        showToast("Token 已清除");
-      };
-
+      // 一鍵存檔：把目前公司＋年度的 store 下載成 JSON 檔
       document.getElementById("btnDownloadJSON").onclick = () => {
+        // 先確保畫面狀態寫回 store / localStorage
+        saveLocal(false);
+
         const { company, year } = getMeta();
-        const key = localKey();
-        const data = localStorage.getItem(key) || "{}";
+        const key   = localKey();
+        const data  = localStorage.getItem(key) || "{}";
 
         const blob = new Blob([data], { type: "application/json;charset=utf-8" });
         const a = document.createElement("a");
@@ -647,104 +716,38 @@
         a.download = `${safeKey(company)}_${year}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
+
+        showToast("JSON 已存檔（可放入 OneDrive 或給同事匯入）");
       };
 
-      // ★ 這裡改成跟 GitHub 上的 repo 名稱一樣：Carboninventory
-      const GIT_OWNER  = "Sethjesus";
-      const GIT_REPO   = "Carboninventory";
-      const GIT_BRANCH = "main";
-
-      // 上傳到 GitHub（PUT /contents）
-      document.getElementById("btnUploadGit").onclick = async () => {
-        try{
-          const token = ensureToken();
-          if(!token) return alert("未設定 Token");
-
-          const { company, year } = getMeta();
-          const fileName = `${safeKey(company)}_${year}.json`;
-          const path     = `data/${fileName}`;
-          const url      = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${path}`;
-
-          const key     = localKey();
-          const raw     = localStorage.getItem(key) || "{}";
-          const content = toBase64Utf8(raw);
-
-          let sha = null;
-          const headRes = await fetch(`${url}?ref=${GIT_BRANCH}`, {
-            headers:{
-              "Authorization": `Bearer ${token}`,
-              "Accept": "application/vnd.github+json"
-            }
-          });
-          if(headRes.ok){
-            const j = await headRes.json();
-            sha = j.sha || null;
-          }
-
-          const body = {
-            message: `Update ${fileName}`,
-            content,
-            branch: GIT_BRANCH
-          };
-          if(sha) body.sha = sha;
-
-          const res = await fetch(url, {
-            method:"PUT",
-            headers:{
-              "Authorization": `Bearer ${token}`,
-              "Accept": "application/vnd.github+json",
-              "Content-Type":"application/json"
-            },
-            body: JSON.stringify(body)
-          });
-
-          const detail = await res.json().catch(()=> ({}));
-          if(!res.ok){
-            console.error("GitHub upload error:", res.status, detail);
-            alert(`上傳失敗（${res.status}）：${detail.message || "未知錯誤"}`);
-            return;
-          }
-          showToast("上傳成功！");
-        }catch(err){
-          alert("上傳錯誤：" + err.message);
-        }
+      // 匯入 JSON：從本機選檔 → 覆蓋目前公司＋年度的 store
+      document.getElementById("btnImportJSON").onclick = () => {
+        fileJSON.value = "";   // reset input
+        fileJSON.click();
       };
 
-      // 從 GitHub 載入（GET /contents）
-      document.getElementById("btnLoadGit").onclick = async () => {
-        try{
-          const token = ensureToken();
-          if(!token) return alert("未設定 Token");
+      fileJSON.addEventListener("change", () => {
+        const file = fileJSON.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try{
+            const text = reader.result || "{}";
+            const obj  = JSON.parse(text);
 
-          const { company, year } = getMeta();
-          const fileName = `${safeKey(company)}_${year}.json`;
-          const url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/data/${fileName}?ref=${GIT_BRANCH}`;
+            // 直接存到目前公司＋年度的 key
+            localStorage.setItem(localKey(), JSON.stringify(obj));
 
-          const res = await fetch(url, {
-            headers:{
-              "Authorization": `Bearer ${token}`,
-              "Accept":"application/vnd.github+json"
-            }
-          });
-
-          if(!res.ok){
-            const detail = await res.json().catch(()=>({}));
-            return alert(`找不到檔案或權限不足（${res.status}）：${detail.message || ""}`);
+            // 重新載入 & 渲染
+            loadLocal();
+            renderAll();
+            showToast("已從 JSON 匯入資料");
+          }catch(e){
+            alert("JSON 解析失敗，請確認檔案格式是否正確。");
           }
-
-          const j = await res.json();
-          const dataStr = fromBase64Utf8(j.content || "");
-          const data = JSON.parse(dataStr || "{}");
-
-          // 存回 localStorage，並立即重載畫面
-          localStorage.setItem(localKey(), JSON.stringify(data));
-          loadLocal();
-          renderAll();
-          showToast("已載入 GitHub 資料，畫面已更新。");
-        }catch(err){
-          alert("下載錯誤：" + err.message);
-        }
-      };
+        };
+        reader.readAsText(file, "utf-8");
+      });
 
       /* =========================
          Excel / PDF
@@ -827,7 +830,6 @@
       let chartTrend = null;
 
       function drawCharts(){
-        // 各固定項目排放 + 自建合計
         const fixedEmis = [...tbodyFixed.querySelectorAll(".actFixed")].map((el,i)=>{
           const a = parseFloat(el.value) || 0;
           return a * FIXED_ITEMS[i].factor;
@@ -849,16 +851,13 @@
           }
         });
 
-        // S1 / S2 / S3 累積
         const acc = { S1:0, S2:0, S3:0 };
 
-        // 固定
         FIXED_ITEMS.forEach((f,i) => {
           const a = parseFloat(tbodyFixed.querySelectorAll(".actFixed")[i].value) || 0;
           acc[f.scope] += a * f.factor;
         });
 
-        // 自建
         [...tbodyCustom.querySelectorAll("tr")].forEach(tr => {
           const t = tr.querySelectorAll("input,select");
           const scope = t[2].value || "S3";
@@ -877,7 +876,6 @@
           options:{ responsive:true }
         });
 
-        // 固定 vs 自建
         const fixedTotal = parseFloat(sumFixed.textContent) || 0;
         if(chartTrend) chartTrend.destroy();
         chartTrend = new Chart(document.getElementById("chartTrend"),{
@@ -896,6 +894,19 @@
       /* =========================
          初始化
       ========================= */
+
+      function restoreMeta(){
+        const raw = localStorage.getItem(META_KEY);
+        if(!raw) return;
+        try{
+          const meta = JSON.parse(raw);
+          if(meta.company) document.getElementById("companyName").value = meta.company;
+          if(meta.year)    document.getElementById("fiscalYear").value  = meta.year;
+          if(meta.operator)document.getElementById("operatorName").value= meta.operator;
+          if(meta.month)   currentMonth = meta.month;
+        }catch(e){}
+      }
+
       function renderAll(){
         loadLocal();
         if(!store[currentMonth]) store[currentMonth] = {};
@@ -907,9 +918,11 @@
         renderFixed();
         renderCustom();
         buildMonthTabs();
+        updateMetaInfo();
         drawCharts();
       }
 
+      restoreMeta();
       renderAll();
 
       // PWA SW 註冊
