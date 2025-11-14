@@ -434,7 +434,7 @@
           b.onclick = () => {
             saveLocal(false);     // 切換前先存
             currentMonth = m;
-            renderAll();
+            renderAll();         // 重新讀取並渲染
           };
           host.appendChild(b);
         }
@@ -649,8 +649,9 @@
         URL.revokeObjectURL(a.href);
       };
 
+      // ★ 這裡改成跟 GitHub 上的 repo 名稱一樣：Carboninventory
       const GIT_OWNER  = "Sethjesus";
-      const GIT_REPO   = "carboninventory";
+      const GIT_REPO   = "Carboninventory";
       const GIT_BRANCH = "main";
 
       // 上傳到 GitHub（PUT /contents）
@@ -734,8 +735,12 @@
           const j = await res.json();
           const dataStr = fromBase64Utf8(j.content || "");
           const data = JSON.parse(dataStr || "{}");
+
+          // 存回 localStorage，並立即重載畫面
           localStorage.setItem(localKey(), JSON.stringify(data));
-          showToast("已載入 GitHub 資料。切換月份或重新整理以刷新畫面。");
+          loadLocal();
+          renderAll();
+          showToast("已載入 GitHub 資料，畫面已更新。");
         }catch(err){
           alert("下載錯誤：" + err.message);
         }
