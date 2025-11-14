@@ -2,9 +2,9 @@
 <html lang="zh-Hant">
 <head>
   <!-- =========================
-       🌿 ESG 碳盤查 v5.9 企業多人版
+       🌿 ESG 碳盤查 v5.9 企業多人版（無 Token 版）
        - 本機儲存 + JSON 匯入/匯出
-       - OneDrive 協作 + 最後更新紀錄
+       - OneDrive 協作 + 年度總覽 + 年度 Excel + 年度 PDF（含項目×部門）
      ========================= -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -171,7 +171,7 @@
         <div>
           <div class="text-xl font-extrabold leading-tight">ESG 碳盤查 v5.9 企業多人版</div>
           <div class="text-xs text-slate-500">
-            固定＋自建＋部門＋Excel/PDF＋本機 JSON 匯入/匯出＋OneDrive 協作＋PWA
+            固定＋自建＋部門＋Excel/PDF＋本機 JSON 匯入/匯出＋OneDrive 協作＋年度總覽＋PWA
           </div>
         </div>
       </div>
@@ -183,7 +183,7 @@
 
   <div id="toast">已儲存</div>
 
-  <!-- 隱藏的檔案選擇器（匯入 JSON 用） -->
+  <!-- 隱藏選檔器（匯入 JSON 用） -->
   <input type="file" id="fileJSON" accept="application/json" style="display:none;" />
 
   <!-- ===== Main ===== -->
@@ -296,18 +296,23 @@
       </div>
     </section>
 
-    <!-- 功能列（含 OneDrive 說明） -->
+    <!-- 功能列 -->
     <section class="card">
       <h2 class="font-bold text-lg mb-3">💾 功能列（多人共用 + OneDrive）</h2>
       <div class="flex flex-wrap gap-3">
         <button id="btnCalc" class="btn">重新計算</button>
-        <button id="btnExportExcel" class="btn-ghost">匯出 Excel（固定＋自建）</button>
-        <button id="btnExportPDF" class="btn-ghost">匯出 PDF（含 3 圖）</button>
-        <button id="btnDownloadJSON" class="btn-ghost">💾 一鍵存檔（下載共享檔）</button>
-        <button id="btnImportJSON" class="btn-ghost">📂 從共享檔案匯入</button>
+        <button id="btnExportExcel" class="btn-ghost">匯出 Excel（當月固定＋自建）</button>
+        <button id="btnExportExcelYear" class="btn-ghost">匯出年度 Excel（12 月總覽）</button>
+
+        <!-- 🔹 PDF：分成當月 + 年度 -->
+        <button id="btnExportPDFMonth" class="btn-ghost">匯出當月 PDF（含 3 圖）</button>
+        <button id="btnExportPDFYear"  class="btn-ghost">匯出年度 PDF（12 月＋項目×部門）</button>
+
+        <button id="btnDownloadJSON" class="btn-ghost">💾 一鍵存檔（下載共享 JSON）</button>
+        <button id="btnImportJSON" class="btn-ghost">📂 從共享 JSON 匯入</button>
 
         <!-- 🔗 直接開啟你的 OneDrive 共享資料夾 -->
-        <a href="https://1drv.ms/f/c/8ef63fdd92f9370f/EniPxLP34YdPi-MJWpVuOQwBl9nH9ZNRfLkuiQRXYNhTzw?e=1PS5ox" 
+        <a href="https://1drv.ms/f/c/8ef63fdd92f9370f/EniPxLP34YdPi-MJWpVuOQwBl9nH9ZNRfLkuiQRXYNhTzw?e=1PS5ox"
            target="_blank"
            class="btn-ghost"
            style="text-decoration:none; display:flex; align-items:center;">
@@ -317,22 +322,22 @@
 
       <div class="hint mt-2">
         ✅ <b>多人協作（建議流程）</b><br>
-        1️⃣ 任一台電腦填完後按「<b>💾 一鍵存檔</b>」→ 會下載 <span class="k">公司_年度.json</span>（例如：景沛ESG_2025.json）。<br>
+        1️⃣ 任一台電腦填完後按「<b>💾 一鍵存檔</b>」→ 會下載 <span class="k">公司_人名_日期時間.json</span>。<br>
         2️⃣ 將此檔案放到公司 OneDrive 共享資料夾：<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;<a href="https://1drv.ms/f/c/8ef63fdd92f9370f/EniPxLP34YdPi-MJWpVuOQwBl9nH9ZNRfLkuiQRXYNhTzw?e=1PS5ox" 
+        &nbsp;&nbsp;&nbsp;&nbsp;<a href="https://1drv.ms/f/c/8ef63fdd92f9370f/EniPxLP34YdPi-MJWpVuOQwBl9nH9ZNRfLkuiQRXYNhTzw?e=1PS5ox"
            target="_blank" style="color:#0ea5e9;">👉 點我開啟 ESG 共用資料夾</a><br>
         3️⃣ 其他電腦要編輯時：<br>
-        &nbsp;&nbsp;• 若有 OneDrive 同步程式 → 匯入時直接從 OneDrive 資料夾選這個 JSON 檔。<br>
-        &nbsp;&nbsp;• 若只有 OneDrive 網頁 → 請先從 OneDrive 下載 JSON 檔到本機，再按「📂 從共享檔案匯入」選檔。<br>
+        &nbsp;&nbsp;• 有 OneDrive 同步程式 → 匯入時直接從 OneDrive 資料夾選 JSON。<br>
+        &nbsp;&nbsp;• 只有 OneDrive 網頁 → 先從網頁下載 JSON 到本機，再按「📂 從共享 JSON 匯入」。<br>
         4️⃣ 修改完成後，再按一次「💾 一鍵存檔」，並用新檔案覆蓋 OneDrive 中的舊檔。<br><br>
-        🔁 建議全公司使用「同一個固定檔名」，例如：<span class="k">景沛ESG_2025.json</span>，避免版本混亂。<br>
-        ℹ 此系統會在 JSON 裡加入 <span class="k">_meta</span> 欄位，記錄公司、年度、操作人、最後更新時間。
+        🔁 建議全公司使用「同一個主檔」，例如：<span class="k">景沛ESG_2025_全公司版本.json</span>。<br>
+        ℹ 系統會在 JSON 裡加入 <span class="k">_meta</span> 欄位，記錄公司、年度、操作人、最後更新時間。
       </div>
     </section>
 
-    <!-- 圖表 -->
+    <!-- 當月圖表 -->
     <section class="card">
-      <h2 class="font-bold text-lg mb-3">📊 視覺化分析</h2>
+      <h2 class="font-bold text-lg mb-3">📊 當月視覺化分析</h2>
       <div class="grid md:grid-cols-3 gap-6">
         <div>
           <h3 class="font-semibold mb-1">各項目排放量</h3>
@@ -349,28 +354,70 @@
       </div>
     </section>
 
+    <!-- 年度總覽（12 個月一覽） -->
+    <section class="card">
+      <h2 class="font-bold text-lg mb-3">📅 年度 12 個月總覽</h2>
+      <div class="overflow-x-auto mb-4">
+        <table class="text-sm">
+          <thead>
+            <tr>
+              <th>月份</th>
+              <th class="num">固定排放 (kgCO₂e)</th>
+              <th class="num">自建排放 (kgCO₂e)</th>
+              <th class="num">合計 (kgCO₂e)</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyYear"></tbody>
+          <tfoot class="font-bold bg-slate-50">
+            <tr>
+              <td>全年合計</td>
+              <td id="sumYearFixed"  class="num">0</td>
+              <td id="sumYearCustom" class="num">0</td>
+              <td id="sumYearTotal"  class="num">0</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div>
+        <h3 class="font-semibold mb-1">年度各月總排放趨勢</h3>
+        <canvas id="chartYear"></canvas>
+      </div>
+
+      <div>
+        <!-- 年度項目×部門圖 -->
+        <h3 class="font-semibold mb-1 mt-4">年度項目＋部門排放量</h3>
+        <canvas id="chartYearDept"></canvas>
+      </div>
+
+      <div class="hint mt-2">
+        此區會讀取目前公司＋年度在本機中已儲存的 1～12 月資料。<br>
+        尚未填寫的月份會顯示為 0。年度項目＋部門圖會「全部列出」所有組合。
+      </div>
+    </section>
+
     <!-- 主程式說明 -->
     <section class="card">
       <h2 class="font-bold text-lg mb-3">⚙️ 程式碼（內嵌）</h2>
       <pre class="text-xs whitespace-pre-wrap leading-5 text-slate-600">
 本頁已內嵌完整 JS：
 - 登入（1234/1234）
-- localStorage 自動記錄（含公司 / 年度 / 月份）
+- localStorage 自動記錄（公司 / 年度 / 月份 / 操作人）
 - _meta：公司 / 年度 / 操作人 / 最後更新時間
-- 本機 JSON 一鍵存檔 / 匯入（搭配 OneDrive）
-- Excel / PDF / 圖表輸出
+- 本機 JSON 一鍵存檔 / 匯入（搭配 OneDrive 共用）
+- 檔名：公司名 + 操作人名 + 日期時間
+- 當月：固定/自建 Excel、PDF、三張圖
+- 年度：12 個月總覽表 + 折線圖 + 項目×部門圖 + 年度 Excel / PDF
       </pre>
     </section>
 
     <script>
       /* =========================
-         簡易登入（帳號/密碼 1234）→ 每次都要登入
+         登入（帳號/密碼 1234）
       ========================= */
       const LOGIN_USER = "1234";
       const LOGIN_PASS = "1234";
-
-      // 記錄上次公司 / 年度 / 月份
-      const META_KEY = "ESGv59_meta";
+      const META_KEY   = "ESGv59_meta";  // 記錄最後公司/年度/操作人/月份
 
       const loginOverlay = document.getElementById("loginOverlay");
       const loginForm    = document.getElementById("loginForm");
@@ -427,11 +474,16 @@
       const fileJSON    = document.getElementById("fileJSON");
       const metaInfo    = document.getElementById("metaInfo");
 
+      const tbodyYear      = document.getElementById("tbodyYear");
+      const sumYearFixed   = document.getElementById("sumYearFixed");
+      const sumYearCustom  = document.getElementById("sumYearCustom");
+      const sumYearTotal   = document.getElementById("sumYearTotal");
+
       let store = {};                               // { _meta:{...}, 1..12: { fixed:{...}, custom:[...] } }
       let currentMonth = new Date().getMonth() + 1; // 1~12
 
       /* =========================
-         固定項目：預設（含部門）
+         固定項目
       ========================= */
       const FIXED_ITEMS = [
         { name:"電力",       scope:"S2", unit:"kWh", factor:0.495, dept:"總部"   },
@@ -456,6 +508,19 @@
       };
       const safeKey = (s) => (s || "公司").replace(/[\\\/:*?"<>|.\s]+/g, "_");
 
+      // 檔名：公司_人名_YYYYMMDD_HHMM
+      function makeFileBaseName(){
+        const { company, operator } = getMeta();
+        const now = new Date();
+        const y  = now.getFullYear();
+        const mo = String(now.getMonth() + 1).padStart(2, "0");
+        const d  = String(now.getDate()).padStart(2, "0");
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const stamp = `${y}${mo}${d}_${hh}${mm}`;
+        return `${safeKey(company)}_${safeKey(operator || "未填")}_${stamp}`;
+      }
+
       function getMeta(){
         const company  = (document.getElementById("companyName").value || "公司").trim();
         const year     = parseInt(document.getElementById("fiscalYear").value) || new Date().getFullYear();
@@ -467,7 +532,6 @@
         return `ESGv59__${safeKey(m.company)}__${m.year}`;
       }
 
-      // 記錄最後一次使用的公司 / 年度 / 月份
       function saveMetaOnly(){
         const { company, year, operator } = getMeta();
         const meta = { company, year, month: currentMonth, operator };
@@ -513,7 +577,7 @@
           b.onclick = () => {
             saveLocal(false);   // 切換前先存
             currentMonth = m;
-            saveMetaOnly();     // 同步記錄最後使用月份
+            saveMetaOnly();
             renderAll();
           };
           host.appendChild(b);
@@ -521,7 +585,7 @@
       }
 
       /* =========================
-         固定表：渲染
+         表格渲染
       ========================= */
       function renderFixed(){
         tbodyFixed.innerHTML = "";
@@ -549,9 +613,6 @@
         calcFixed();
       }
 
-      /* =========================
-         自建表：渲染 & 行產生器
-      ========================= */
       function trCustomRow(o={}){
         const s = o.scope || "S3";
         const act = o.activity || 0;
@@ -588,7 +649,7 @@
       }
 
       /* =========================
-         計算：固定 / 自建
+         計算
       ========================= */
       function calcFixed(){
         let total = 0;
@@ -617,8 +678,8 @@
 
         trs.forEach(tr => {
           const t  = tr.querySelectorAll("input,select");
-          const a  = parseFloat(t[3].value) || 0;   // 用量
-          const f  = parseFloat(t[5].value) || 0;   // 係數
+          const a  = parseFloat(t[3].value) || 0;
+          const f  = parseFloat(t[5].value) || 0;
           const emi = a * f;
           tr.querySelector(".emi").textContent = emi.toFixed(3);
           total += emi;
@@ -663,7 +724,6 @@
         if(!store[currentMonth]) store[currentMonth] = {};
         store[currentMonth].custom = packCustomRows();
 
-        // meta 寫進 store._meta，會一起被存到 JSON
         const { company, year, operator } = getMeta();
         const lastUpdated = new Date().toISOString();
         store._meta = { company, year, operator: operator || "未填", lastUpdated };
@@ -698,31 +758,26 @@
       document.getElementById("btnCalc").onclick = () => { calcFixed(); calcCustom(); };
 
       /* =========================
-         JSON 匯出 / 匯入（本機 + OneDrive 手動搬檔）
+         JSON 匯出 / 匯入
       ========================= */
-
-      // 一鍵存檔：把目前公司＋年度的 store 下載成 JSON 檔
       document.getElementById("btnDownloadJSON").onclick = () => {
-        // 先確保畫面狀態寫回 store / localStorage
         saveLocal(false);
-
-        const { company, year } = getMeta();
         const key   = localKey();
         const data  = localStorage.getItem(key) || "{}";
+        const base  = makeFileBaseName();
 
         const blob = new Blob([data], { type: "application/json;charset=utf-8" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${safeKey(company)}_${year}.json`;
+        a.download = `${base}.json`;
         a.click();
         URL.revokeObjectURL(a.href);
 
         showToast("JSON 已存檔（可放入 OneDrive 或給同事匯入）");
       };
 
-      // 匯入 JSON：從本機選檔 → 覆蓋目前公司＋年度的 store
       document.getElementById("btnImportJSON").onclick = () => {
-        fileJSON.value = "";   // reset input
+        fileJSON.value = "";
         fileJSON.click();
       };
 
@@ -734,11 +789,7 @@
           try{
             const text = reader.result || "{}";
             const obj  = JSON.parse(text);
-
-            // 直接存到目前公司＋年度的 key
             localStorage.setItem(localKey(), JSON.stringify(obj));
-
-            // 重新載入 & 渲染
             loadLocal();
             renderAll();
             showToast("已從 JSON 匯入資料");
@@ -757,7 +808,7 @@
         const wb = XLSX.utils.book_new();
 
         const headerFixed = ["項目","範疇","用量","單位","排放係數","部門","排放量"];
-        const dataFixed = [ ["公司名稱",company], ["年度",year], [], headerFixed ];
+        const dataFixed = [ ["公司名稱",company], ["年度",year], ["月份", currentMonth], [], headerFixed ];
         [...tbodyFixed.querySelectorAll("tr")].forEach((tr, idx) => {
           const act = parseFloat(tr.querySelector(".actFixed").value)||0;
           const d   = tr.children[5].querySelector("input").value || FIXED_ITEMS[idx].dept;
@@ -768,7 +819,7 @@
         XLSX.utils.book_append_sheet(wb, wsFixed, "固定項目");
 
         const headerCustom = ["項目","分類","範疇","用量","單位","排放係數","部門","排放量"];
-        const dataCustom = [ ["公司名稱",company], ["年度",year], [], headerCustom ];
+        const dataCustom = [ ["公司名稱",company], ["年度",year], ["月份", currentMonth], [], headerCustom ];
         [...tbodyCustom.querySelectorAll("tr")].forEach(tr => {
           const t = tr.querySelectorAll("input,select");
           const a = parseFloat(t[3].value)||0, f = parseFloat(t[5].value)||0;
@@ -777,10 +828,51 @@
         const wsCustom = XLSX.utils.aoa_to_sheet(dataCustom);
         XLSX.utils.book_append_sheet(wb, wsCustom, "自建項目");
 
-        XLSX.writeFile(wb, `${safeKey(company)}_${year}_${currentMonth}月.xlsx`);
+        const base = makeFileBaseName();
+        const mStr = String(currentMonth).padStart(2, "0");
+        XLSX.writeFile(wb, `${base}_M${mStr}.xlsx`);
       };
 
-      document.getElementById("btnExportPDF").onclick = async () => {
+      document.getElementById("btnExportExcelYear").onclick = () => {
+        const { company, year } = getMeta();
+        const wb = XLSX.utils.book_new();
+
+        const rows = getMonthTotalsFromStore();
+        const aoa = [
+          ["公司名稱", company],
+          ["年度", year],
+          [],
+          ["月份","固定排放 (kgCO₂e)","自建排放 (kgCO₂e)","合計 (kgCO₂e)"]
+        ];
+
+        let totalFixed  = 0;
+        let totalCustom = 0;
+        let totalAll    = 0;
+
+        rows.forEach(r => {
+          aoa.push([
+            `${r.month}月`,
+            r.fixed,
+            r.custom,
+            r.total
+          ]);
+          totalFixed  += r.fixed;
+          totalCustom += r.custom;
+          totalAll    += r.total;
+        });
+
+        aoa.push([]);
+        aoa.push(["全年合計", totalFixed, totalCustom, totalAll]);
+
+        const wsYear = XLSX.utils.aoa_to_sheet(aoa);
+        XLSX.utils.book_append_sheet(wb, wsYear, "年度總覽");
+
+        const base = makeFileBaseName();
+        XLSX.writeFile(wb, `${base}_YearSummary.xlsx`);
+      };
+
+      // 當月 PDF
+      async function exportMonthPDF(){
         try{
           const { PDFDocument } = PDFLib;
           const pdf = await PDFDocument.create();
@@ -815,19 +907,228 @@
           const bytes = await pdf.save();
           const a = document.createElement("a");
           a.href = URL.createObjectURL(new Blob([bytes], { type:"application/pdf" }));
-          a.download = `${safeKey(company)}_${year}_${currentMonth}.pdf`;
+          const base = makeFileBaseName();
+          const mStr = String(currentMonth).padStart(2, "0");
+          a.download = `${base}_M${mStr}.pdf`;
           a.click();
         }catch(err){
-          alert("PDF 產出錯誤： " + err.message);
+          alert("當月 PDF 產出錯誤： " + err.message);
         }
-      };
+      }
+
+      // 年度 PDF（12 月總覽 + 項目×部門）
+      async function exportYearPDF(){
+        try{
+          const { PDFDocument } = PDFLib;
+          const pdf = await PDFDocument.create();
+          const page = pdf.addPage([842,595]); // A4 橫式
+
+          const { company, year } = getMeta();
+          const rows = getMonthTotalsFromStore();
+          let yearTotal = 0;
+          rows.forEach(r => { yearTotal += r.total; });
+
+          const c = document.createElement("canvas");
+          c.width = 800; c.height = 56;
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0,0,800,56);
+          ctx.fillStyle = "#0f172a";
+          ctx.font = 'bold 18px "Microsoft JhengHei", Arial, sans-serif';
+          ctx.fillText(`${company} 碳盤查年度報表｜${year} 年｜全年總排放：${yearTotal.toFixed(3)} kgCO₂e`, 12, 35);
+          const timg = await pdf.embedPng(c.toDataURL("image/png"));
+          page.drawImage(timg, { x:21, y:520, width:800, height:56 });
+
+          const yearCanvas = document.getElementById("chartYear");
+          const deptCanvas = document.getElementById("chartYearDept");
+
+          // 上：12 月總排放折線圖
+          if(yearCanvas){
+            const yImg = await pdf.embedPng(yearCanvas.toDataURL("image/png"));
+            page.drawImage(yImg, { x:40, y:310, width:760, height:200 });
+          }
+
+          // 下：年度 項目×部門 排放量
+          if(deptCanvas){
+            const dImg = await pdf.embedPng(deptCanvas.toDataURL("image/png"));
+            page.drawImage(dImg, { x:40, y:80, width:760, height:200 });
+          }
+
+          const bytes = await pdf.save();
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([bytes], { type:"application/pdf" }));
+          const base = makeFileBaseName();
+          a.download = `${base}_Year.pdf`;
+          a.click();
+        }catch(err){
+          alert("年度 PDF 產出錯誤： " + err.message);
+        }
+      }
+
+      document.getElementById("btnExportPDFMonth").onclick = exportMonthPDF;
+      document.getElementById("btnExportPDFYear").onclick  = exportYearPDF;
 
       /* =========================
-         圖表
+         年度統計與圖表
       ========================= */
+      function getMonthTotalsFromStore(){
+        const result = [];
+        for(let m=1;m<=12;m++){
+          const s = store[m];
+          let fixed = 0;
+          let custom = 0;
+
+          if(s && s.fixed){
+            Object.keys(s.fixed).forEach(idxStr => {
+              const rec = s.fixed[idxStr];
+              const act = parseFloat(rec.activity) || 0;
+              const idx = parseInt(idxStr, 10);
+              const f   = FIXED_ITEMS[idx] ? FIXED_ITEMS[idx].factor : 0;
+              fixed += act * f;
+            });
+          }
+
+          if(s && Array.isArray(s.custom)){
+            s.custom.forEach(row => {
+              const a = parseFloat(row.activity) || 0;
+              const f = parseFloat(row.factor)   || 0;
+              custom += a * f;
+            });
+          }
+
+          result.push({
+            month: m,
+            fixed,
+            custom,
+            total: fixed + custom
+          });
+        }
+        return result;
+      }
+
+      // 年度：按「項目＋部門」彙總
+      function getYearTotalsByItemDept(){
+        const map = new Map(); // key: "項目（部門）" → emission
+
+        for(let m=1;m<=12;m++){
+          const s = store[m];
+          if(!s) continue;
+
+          if(s.fixed){
+            Object.keys(s.fixed).forEach(idxStr => {
+              const rec = s.fixed[idxStr];
+              const act = parseFloat(rec.activity) || 0;
+              const idx = parseInt(idxStr, 10);
+              const base = FIXED_ITEMS[idx];
+              if(!base) return;
+              const emi = act * base.factor;
+              const dept = rec.dept || base.dept || "未填";
+              const key  = `${base.name}（${dept}）`;
+              map.set(key, (map.get(key) || 0) + emi);
+            });
+          }
+
+          if(Array.isArray(s.custom)){
+            s.custom.forEach(row => {
+              const a   = parseFloat(row.activity) || 0;
+              const f   = parseFloat(row.factor)   || 0;
+              const emi = a * f;
+              const name = row.name || "自建項目";
+              const dept = row.dept || "未填";
+              const key  = `${name}（${dept}）`;
+              map.set(key, (map.get(key) || 0) + emi);
+            });
+          }
+        }
+
+        const labels = [];
+        const data   = [];
+        for(const [k,v] of map.entries()){
+          labels.push(k);
+          data.push(v);
+        }
+        return { labels, data };
+      }
+
       let chartItems = null;
       let chartScopes = null;
       let chartTrend = null;
+      let chartYear  = null;
+      let chartYearDept = null;
+
+      function drawYearSummary(){
+        if(!tbodyYear) return;
+
+        const rows = getMonthTotalsFromStore();
+        tbodyYear.innerHTML = "";
+
+        let totalFixed = 0;
+        let totalCustom = 0;
+        let totalAll = 0;
+
+        rows.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = [
+            `<td>${r.month} 月</td>`,
+            `<td class="num">${r.fixed.toFixed(3)}</td>`,
+            `<td class="num">${r.custom.toFixed(3)}</td>`,
+            `<td class="num">${r.total.toFixed(3)}</td>`
+          ].join("");
+          tbodyYear.appendChild(tr);
+
+          totalFixed  += r.fixed;
+          totalCustom += r.custom;
+          totalAll    += r.total;
+        });
+
+        sumYearFixed.textContent  = totalFixed.toFixed(3);
+        sumYearCustom.textContent = totalCustom.toFixed(3);
+        sumYearTotal.textContent  = totalAll.toFixed(3);
+
+        const labels = rows.map(r => r.month + "月");
+        const data   = rows.map(r => r.total);
+
+        if(chartYear) chartYear.destroy();
+        chartYear = new Chart(document.getElementById("chartYear"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [{
+              label: "各月總排放 (kgCO₂e)",
+              data
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+
+        const agg = getYearTotalsByItemDept();
+        if(chartYearDept) chartYearDept.destroy();
+        chartYearDept = new Chart(document.getElementById("chartYearDept"), {
+          type: "bar",
+          data: {
+            labels: agg.labels,
+            datasets: [{
+              label: "年度排放量 (kgCO₂e)",
+              data: agg.data
+            }]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            plugins: {
+              legend: { display: false }
+            },
+            scales:{
+              x:{ title:{ display:true, text:"kgCO₂e" } }
+            }
+          }
+        });
+      }
 
       function drawCharts(){
         const fixedEmis = [...tbodyFixed.querySelectorAll(".actFixed")].map((el,i)=>{
@@ -852,12 +1153,10 @@
         });
 
         const acc = { S1:0, S2:0, S3:0 };
-
         FIXED_ITEMS.forEach((f,i) => {
           const a = parseFloat(tbodyFixed.querySelectorAll(".actFixed")[i].value) || 0;
           acc[f.scope] += a * f.factor;
         });
-
         [...tbodyCustom.querySelectorAll("tr")].forEach(tr => {
           const t = tr.querySelectorAll("input,select");
           const scope = t[2].value || "S3";
@@ -889,12 +1188,14 @@
             plugins:{ legend:{ display:false } }
           }
         });
+
+        // 年度總覽＋年度圖
+        drawYearSummary();
       }
 
       /* =========================
          初始化
       ========================= */
-
       function restoreMeta(){
         const raw = localStorage.getItem(META_KEY);
         if(!raw) return;
@@ -925,7 +1226,6 @@
       restoreMeta();
       renderAll();
 
-      // PWA SW 註冊
       if('serviceWorker' in navigator){
         navigator.serviceWorker.register('service-worker.js').catch(()=>{});
       }
